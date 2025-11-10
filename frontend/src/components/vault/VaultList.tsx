@@ -1,15 +1,15 @@
-import { useVaults } from '../../hooks/useVaults';
 import { VaultCard } from './VaultCard';
 import type { UserVault } from '../../types/contracts';
 
 interface VaultListProps {
   account: string | null;
+  vaults: UserVault[];
+  loading: boolean;
+  error: string | null;
   onSelectVault: (vault: UserVault) => void;
 }
 
-export const VaultList = ({ account, onSelectVault }: VaultListProps) => {
-  const { vaults, loading, error } = useVaults(account);
-
+export const VaultList = ({ account, vaults, loading, error, onSelectVault }: VaultListProps) => {
   if (!account) {
     return (
       <div className="vault-list-empty">

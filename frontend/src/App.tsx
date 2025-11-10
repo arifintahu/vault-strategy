@@ -11,7 +11,7 @@ import './App.css';
 
 function App() {
   const { account } = useWallet();
-  const { refresh } = useVaults(account);
+  const { vaults, loading, error, refresh } = useVaults(account);
   const [selectedVault, setSelectedVault] = useState<UserVault | null>(null);
 
   const handleVaultCreated = () => {
@@ -53,7 +53,13 @@ function App() {
 
           {/* Vault List */}
           <div className="grid-item full-width">
-            <VaultList account={account} onSelectVault={setSelectedVault} />
+            <VaultList 
+              account={account} 
+              vaults={vaults}
+              loading={loading}
+              error={error}
+              onSelectVault={setSelectedVault} 
+            />
           </div>
         </div>
       </div>
