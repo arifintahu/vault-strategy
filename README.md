@@ -1,5 +1,5 @@
 
-# vaultBTC Auto-Leverage AI Strategy — Demo (Ethereum)
+# Vault Strategy — Demo (Ethereum)
 
 > Minimal, open-source demonstration for a *Bitcoin trustless vaults–ready* DeFi idea. We assume **`vaultBTC` is an ERC20** that represents users’ BTC positions. This repo shows a working demo on Ethereum (local Hardhat) with a strategy that **increases leverage on dips and takes profit by deleveraging on rallies** using simple MA bands.
 

@@ -1,5 +1,5 @@
 {
-  "name": "vault-auto-leverage",
+  "name": "vault-strategy",
   "version": "0.1.0",
   "private": true,
   "scripts": {

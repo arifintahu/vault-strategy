@@ -6,7 +6,7 @@ inclusion: always
 
 ## System Overview
 
-The vaultBTC Auto-Leverage Strategy uses a factory pattern where each user deploys their own isolated vault contract. The system automatically adjusts leverage based on price movements relative to MA bands, while maintaining user custody of funds.
+The Vault Strategy uses a factory pattern where each user deploys their own isolated vault contract. The system automatically adjusts leverage based on price movements relative to MA bands, while maintaining user custody of funds.
 
 ## Factory Pattern
 

@@ -4,7 +4,7 @@ inclusion: always
 
 # Product Overview
 
-**vaultBTC Auto-Leverage Strategy** - A DeFi protocol that provides automated, rule-based leverage management for Bitcoin holders with self-custody guarantees.
+**Vault Strategy** - A DeFi protocol that provides automated, rule-based leverage management for Bitcoin holders with self-custody guarantees.
 
 ## Problem Statement
 
