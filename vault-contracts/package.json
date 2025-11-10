@@ -5,7 +5,9 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.ts",
+    "setup": "hardhat run scripts/setup-local.ts --network localhost",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "oracle:init": "hardhat run scripts/init-oracle.ts --network localhost",
     "simulate": "hardhat run scripts/simulate.ts",
     "query": "hardhat run scripts/query-state.ts",
     "oracle:update": "hardhat run scripts/update-oracle.ts",

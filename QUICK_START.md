@@ -1,243 +1,162 @@
-# 🚀 Quick Start Guide
+# Quick Start Guide
+
+Get the Vault Strategy dApp running in 3 simple steps!
 
 ## Prerequisites
 
 - Node.js 18+ installed
-- MetaMask browser extension installed
+- A Web3 wallet (MetaMask, OKX Wallet, etc.)
 
-## Step-by-Step Setup
+## Step 1: Start Hardhat Node
 
-### 1. Start Hardhat Node
-
-Open a new terminal and run:
+Open a terminal and start the local blockchain:
 
 ```bash
 cd vault-contracts
 npx hardhat node
 ```
 
-**Keep this terminal running!** You should see:
-
+Keep this terminal running. You should see:
 ```
 Started HTTP and WebSocket JSON-RPC server at http://127.0.0.1:8545/
-
-Accounts
-========
-Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
-Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-...
 ```
 
-### 2. Deploy Contracts
+## Step 2: Deploy & Setup Contracts
 
-Open a **new terminal** (keep the first one running) and run:
+Open a **new terminal** and run the setup script:
 
 ```bash
 cd vault-contracts
-npm run deploy:local
+npm run setup
 ```
 
-You should see:
+This will:
+- ✅ Deploy all contracts (VaultBTC, MockAave, OracleEMA, StrategyFactory)
+- ✅ Initialize oracle with BTC price data ($50,000)
+- ✅ Mint 10 vBTC to the deployer
+- ✅ Display all contract addresses
 
-```
-✅ Deployment Summary
-VaultBTC: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-MockAave: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-OracleEMA: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-StrategyFactory: 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
-```
+**Important:** Copy the contract addresses from the output!
 
-### 3. Configure MetaMask
+## Step 3: Update Frontend & Start
 
-#### Add Hardhat Network
+1. Update contract addresses in `frontend/src/contracts/addresses.ts` with the addresses from Step 2
 
-1. Open MetaMask
-2. Click network dropdown (top left)
-3. Click "Add network" → "Add a network manually"
-4. Enter:
-   - **Network name**: Hardhat Local
-   - **New RPC URL**: http://127.0.0.1:8545
-   - **Chain ID**: 31337
-   - **Currency symbol**: ETH
-5. Click "Save"
-
-#### Import Test Account
-
-1. In MetaMask, click account icon → "Import Account"
-2. Select "Private Key"
-3. Paste this private key:
-   ```
-   0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-   ```
-4. Click "Import"
-
-This account has 10,000 ETH for testing.
-
-### 4. Get Test vBTC
-
-Run this script to mint vBTC to your account:
-
-```bash
-cd vault-contracts
-npx hardhat console --network localhost
-```
-
-Then in the console:
-
-```javascript
-const VaultBTC = await ethers.getContractFactory("VaultBTC");
-const vbtc = await VaultBTC.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-await vbtc.mint("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", ethers.parseUnits("100", 8));
-console.log("Minted 100 vBTC!");
-```
-
-Press Ctrl+C twice to exit.
-
-### 5. Start Frontend
-
-Open a **third terminal** and run:
+2. Start the frontend:
 
 ```bash
 cd frontend
+npm install  # First time only
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+3. Open http://localhost:5173 in your browser
 
-### 6. Connect Wallet
+4. Click "Connect Wallet" and select your wallet
 
-1. Click "Connect Wallet" button
-2. MetaMask will pop up
-3. Select the imported account
-4. Click "Connect"
+5. **For MetaMask:** Network will be added automatically when prompted ✅
 
-### 7. Use the App
+6. **For OKX Wallet:** Add network manually first (OKX requires HTTPS for API):
+   - Open OKX Wallet → Network dropdown → Manage Networks → Add Network
+   - Enter:
+     - Network Name: Hardhat Local
+     - RPC URL: http://127.0.0.1:8545
+     - Chain ID: 31337
+     - Currency Symbol: ETH
+   - **Detailed guide:** `frontend/OKX_SETUP_INSTRUCTIONS.md`
+   - **Debug tool:** http://localhost:5173/debug.html
 
-Now you can:
+## Step 4: Fund Your Wallet (Optional)
 
-1. **View Oracle Status** - See BTC price and EMA signals
-2. **Create Vault** - Select risk tier and create a vault
-3. **Deposit vBTC** - Add vBTC to your vault
-4. **Supply to Aave** - Lend vBTC to earn yield
-5. **Rebalance** - Adjust leverage based on market signals
+If you need ETH in your wallet for testing:
+
+```bash
+cd vault-contracts
+npx hardhat run scripts/fund-deployer.ts --network localhost
+```
+
+Or manually send ETH from one of Hardhat's default accounts.
+
+## You're Ready! 🎉
+
+You can now:
+- View real-time oracle data (BTC price & EMAs)
+- Create leverage strategy vaults (Low/Medium/High risk)
+- Deposit vBTC into vaults
+- Borrow from Aave
+- Manage your positions
 
 ## Troubleshooting
 
-### Error: "Contract not deployed"
+### "Cannot connect to Hardhat node"
+- Make sure `npx hardhat node` is running in a separate terminal
+- Check that it's running on http://127.0.0.1:8545
 
-**Solution**: Make sure you ran step 2 (deploy contracts)
+### "Oracle not initialized"
+- Run: `cd vault-contracts && npm run oracle:init`
 
-```bash
-cd vault-contracts
-npm run deploy:local
-```
+### "Wrong network" in wallet
+- Click the "Switch to Hardhat Network" button in the app
+- Or manually add the network in your wallet settings
 
-### Error: "Cannot connect to Hardhat node"
+### OKX Wallet not connecting
+- Make sure OKX Wallet extension is installed and unlocked
+- Try refreshing the page
+- RainbowKit will automatically detect OKX Wallet
 
-**Solution**: Make sure Hardhat node is running (step 1)
+### Contract addresses don't match
+- Make sure you updated `frontend/src/contracts/addresses.ts` with the addresses from `npm run setup`
+- Restart the frontend after updating addresses
 
-```bash
-cd vault-contracts
-npx hardhat node
-```
+## Development Workflow
 
-### Error: "Insufficient funds"
+### Reset Everything
+If you want to start fresh:
 
-**Solution**: Make sure you:
-1. Imported the test account in MetaMask
-2. Minted vBTC to your account (step 4)
+1. Stop Hardhat node (Ctrl+C)
+2. Restart: `npx hardhat node`
+3. Redeploy: `npm run setup`
+4. Update frontend addresses
+5. Refresh browser
 
-### MetaMask shows wrong network
-
-**Solution**: 
-1. Open MetaMask
-2. Click network dropdown
-3. Select "Hardhat Local"
-
-### Transactions fail
-
-**Solution**: Reset MetaMask account:
-1. MetaMask → Settings → Advanced
-2. Scroll down to "Clear activity tab data"
-3. Click "Clear"
-
-## Terminal Summary
-
-You should have **3 terminals running**:
-
-```
-Terminal 1: Hardhat Node
-cd vault-contracts && npx hardhat node
-
-Terminal 2: Available for commands
-cd vault-contracts
-
-Terminal 3: Frontend Dev Server
-cd frontend && npm run dev
-```
-
-## Testing the Full Flow
-
-### 1. Create a Vault
-
-1. Select risk tier (Low/Medium/High)
-2. Click "Create Vault"
-3. Confirm transaction in MetaMask
-4. Wait for confirmation
-5. Your vault appears in the list
-
-### 2. Deposit vBTC
-
-1. Click on your vault
-2. Enter amount (e.g., 5)
-3. Click "Deposit"
-4. Confirm transaction
-5. Wait for confirmation
-
-### 3. Supply to Aave
-
-1. Enter amount to supply
-2. Click "Supply to Aave"
-3. Confirm transaction
-4. Your vault now earns yield
-
-### 4. Rebalance
-
-1. Click "Rebalance" button
-2. Confirm transaction
-3. Leverage adjusts based on market signal
-
-## Useful Commands
+### Update Oracle Price
+To simulate price changes:
 
 ```bash
-# Check contract deployment
 cd vault-contracts
-npm run query
+npx hardhat run scripts/update-oracle.ts --network localhost
+```
 
-# Run simulation
-npm run simulate
+## Project Structure
 
-# Update oracle (simulate market changes)
-npm run oracle:update
-
-# View all contract states
-npm run query
+```
+vault-strategy/
+├── vault-contracts/          # Smart contracts
+│   ├── contracts/            # Solidity contracts
+│   ├── scripts/              # Deployment & utility scripts
+│   └── test/                 # Contract tests
+└── frontend/                 # React frontend
+    ├── src/
+    │   ├── components/       # UI components
+    │   ├── contracts/        # ABIs & addresses
+    │   ├── hooks/            # React hooks
+    │   └── config/           # wagmi/RainbowKit config
+    └── WALLET_SETUP.md       # Detailed wallet guide
 ```
 
 ## Next Steps
 
-- Experiment with different risk tiers
-- Try rebalancing at different market conditions
-- Monitor how leverage changes with EMA signals
-- Test deposit/withdraw flows
+- Read `vault-contracts/README.md` for contract details
+- Read `frontend/WALLET_SETUP.md` for wallet configuration
+- Check `vault-contracts/DEPLOYMENT.md` for deployment guide
+- Explore the code and customize!
 
-## Need Help?
+## Support
 
-Check the documentation:
-- `frontend/README.md` - Frontend documentation
-- `vault-contracts/SCRIPTS.md` - Contract scripts guide
-- `MONOREPO_GUIDE.md` - Complete monorepo guide
+If you encounter issues:
+1. Check the troubleshooting section above
+2. Review the error messages in browser console
+3. Check Hardhat node terminal for errors
+4. Ensure all dependencies are installed
 
----
-
-**Happy Testing!** 🎉
+Happy building! 🚀

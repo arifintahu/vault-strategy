@@ -1,5 +1,7 @@
 import { ethers } from 'ethers';
 import { CONTRACTS, RPC_URL } from '../contracts/addresses';
+import type { WalletClient } from 'viem';
+import { BrowserProvider } from 'ethers';
 
 // Import ABIs
 import VaultBTCABI from '../contracts/abis/VaultBTC.json';
@@ -12,9 +14,27 @@ export const getProvider = () => {
   return new ethers.JsonRpcProvider(RPC_URL);
 };
 
+// Convert wagmi WalletClient to ethers Signer
+export async function walletClientToSigner(walletClient: WalletClient) {
+  const { account, chain, transport } = walletClient;
+  
+  if (!account || !chain) {
+    throw new Error('Wallet not connected');
+  }
+  
+  const network = {
+    chainId: chain.id,
+    name: chain.name,
+    ensAddress: chain.contracts?.ensRegistry?.address,
+  };
+  const provider = new BrowserProvider(transport, network);
+  const signer = await provider.getSigner(account.address);
+  return signer;
+}
+
 export const getSigner = async () => {
   if (!window.ethereum) {
-    throw new Error('MetaMask not installed');
+    throw new Error('Wallet not installed');
   }
   const provider = new ethers.BrowserProvider(window.ethereum);
   return provider.getSigner();
@@ -40,16 +60,7 @@ export const getLeverageStrategyContract = (address: string, signerOrProvider: e
   return new ethers.Contract(address, LeverageStrategyABI.abi, signerOrProvider);
 };
 
-// Request account access
-export const connectWallet = async () => {
-  if (!window.ethereum) {
-    throw new Error('MetaMask not installed');
-  }
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-  return accounts[0];
-};
-
-// Add MetaMask types
+// Add wallet types
 declare global {
   interface Window {
     ethereum?: any;

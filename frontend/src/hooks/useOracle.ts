@@ -18,6 +18,13 @@ export const useOracle = () => {
       const isBullish = await oracle.isBullish();
       const isBearish = await oracle.isBearish();
 
+      // Check if oracle is initialized (price > 0)
+      if (price === 0n) {
+        setError('Oracle not initialized. Please run: cd vault-contracts && npx hardhat run scripts/init-oracle.ts --network localhost');
+        setLoading(false);
+        return;
+      }
+
       setOracleData({
         price,
         ema20,
@@ -31,9 +38,9 @@ export const useOracle = () => {
     } catch (err: any) {
       console.error('Oracle fetch error:', err);
       if (err.code === 'BAD_DATA') {
-        setError('Contract not deployed. Please run: cd vault-contracts && npm run deploy:local');
+        setError('Oracle not initialized. Run: npx hardhat run scripts/init-oracle.ts --network localhost');
       } else if (err.code === 'NETWORK_ERROR') {
-        setError('Cannot connect to Hardhat node. Please run: cd vault-contracts && npx hardhat node');
+        setError('Cannot connect to Hardhat node. Run: npx hardhat node');
       } else {
         setError(err.message || 'Failed to fetch oracle data');
       }

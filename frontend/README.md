@@ -1,32 +1,17 @@
-# Vault Strategy - Frontend
+# Vault Strategy Frontend
 
-React + TypeScript frontend for interacting with Vault Strategy smart contracts.
+A React + TypeScript frontend for the Vault Strategy protocol with RainbowKit wallet integration.
 
 ## Features
 
-✅ **Wallet Connection** - Connect with MetaMask  
-✅ **Oracle Monitoring** - Real-time EMA signals and price data  
-✅ **Vault Management** - Create and manage leverage vaults  
-✅ **Deposit/Withdraw** - Manage vBTC in vaults  
-✅ **Supply to Aave** - Lend vBTC to earn yield  
-✅ **Rebalancing** - Trigger leverage adjustments  
-✅ **Portfolio Tracking** - View vault metrics and leverage  
+- 🎨 **RainbowKit Integration** - Beautiful wallet connection UI supporting MetaMask, OKX Wallet, Coinbase, and more
+- ⚡ **wagmi + viem** - Modern Ethereum library stack
+- 🔄 **Automatic Network Switching** - Seamlessly switch to Hardhat Local network
+- 📊 **Real-time Oracle Data** - EMA-based price oracle monitoring
+- 🏦 **Vault Management** - Create and manage leverage strategy vaults
+- 💰 **Aave Integration** - Lending and borrowing functionality
 
-## Tech Stack
-
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Ethers.js 6** - Ethereum interaction
-- **CSS3** - Styling
-
-## Prerequisites
-
-- Node.js 18+
-- MetaMask browser extension
-- Running Hardhat node with deployed contracts
-
-## Setup
+## Quick Start
 
 ### 1. Install Dependencies
 
@@ -34,18 +19,17 @@ React + TypeScript frontend for interacting with Vault Strategy smart contracts.
 npm install
 ```
 
-### 2. Update Contract Addresses
+### 2. Configure WalletConnect (Optional)
 
-Edit `src/contracts/addresses.ts` with your deployed contract addresses:
+For WalletConnect support, get a free Project ID:
 
-```typescript
-export const CONTRACTS = {
-  VaultBTC: '0x...',
-  MockAave: '0x...',
-  OracleEMA: '0x...',
-  StrategyFactory: '0x...',
-};
-```
+1. Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
+2. Create a project
+3. Copy your Project ID
+4. Update `src/config/wagmi.ts`:
+   ```typescript
+   projectId: 'YOUR_PROJECT_ID_HERE'
+   ```
 
 ### 3. Start Development Server
 
@@ -53,175 +37,102 @@ export const CONTRACTS = {
 npm run dev
 ```
 
-The app will be available at http://localhost:5173
+The app will be available at `http://localhost:5173`
 
-## Usage
+### 4. Connect Your Wallet
 
-### 1. Start Hardhat Node
-
-In a separate terminal:
-
-```bash
-cd ../vault-contracts
-npx hardhat node
-```
-
-### 2. Deploy Contracts
-
-```bash
-cd ../vault-contracts
-npm run deploy:local
-```
-
-Copy the deployed addresses to `src/contracts/addresses.ts`
-
-### 3. Connect MetaMask
-
-1. Open MetaMask
-2. Add Hardhat network:
+1. Make sure Hardhat node is running: `cd ../vault-contracts && npx hardhat node`
+2. Click "Connect Wallet" in the app
+3. Select your wallet (MetaMask, OKX, etc.)
+4. When prompted, add/switch to Hardhat Local network:
    - Network Name: Hardhat Local
    - RPC URL: http://127.0.0.1:8545
    - Chain ID: 31337
    - Currency Symbol: ETH
-
-3. Import a test account from Hardhat node output
-
-### 4. Get Test vBTC
-
-Run the mint script or use the deployed contracts to mint test vBTC to your address.
-
-### 5. Use the App
-
-1. **Connect Wallet** - Click "Connect Wallet" button
-2. **View Oracle** - See current BTC price and EMA signals
-3. **Create Vault** - Select risk tier and create a new vault
-4. **Deposit vBTC** - Add vBTC to your vault
-5. **Supply to Aave** - Lend vBTC to earn yield
-6. **Rebalance** - Adjust leverage based on market conditions
 
 ## Project Structure
 
 ```
 frontend/
 ├── src/
-│   ├── components/
-│   │   ├── wallet/
-│   │   │   └── ConnectWallet.tsx
-│   │   ├── vault/
-│   │   │   ├── CreateVault.tsx
-│   │   │   ├── VaultCard.tsx
-│   │   │   ├── VaultList.tsx
-│   │   │   └── VaultActions.tsx
-│   │   ├── oracle/
-│   │   │   └── OracleStatus.tsx
-│   │   └── layout/
-│   │       ├── Header.tsx
-│   │       └── Layout.tsx
-│   ├── hooks/
-│   │   ├── useWallet.ts
-│   │   ├── useOracle.ts
-│   │   └── useVaults.ts
-│   ├── utils/
-│   │   ├── contracts.ts
-│   │   └── formatting.ts
-│   ├── contracts/
-│   │   ├── abis/
-│   │   └── addresses.ts
-│   ├── types/
-│   │   └── contracts.ts
-│   ├── App.tsx
-│   ├── App.css
-│   └── main.tsx
+│   ├── components/       # React components
+│   │   ├── layout/       # Layout components
+│   │   ├── oracle/       # Oracle status display
+│   │   ├── vault/        # Vault management
+│   │   └── wallet/       # Wallet connection
+│   ├── config/           # Configuration files
+│   │   └── wagmi.ts      # wagmi/RainbowKit config
+│   ├── contracts/        # Contract ABIs and addresses
+│   ├── hooks/            # Custom React hooks
+│   ├── types/            # TypeScript types
+│   └── utils/            # Utility functions
+├── WALLET_SETUP.md       # Detailed wallet setup guide
 └── package.json
 ```
 
-## Components
+## Available Scripts
 
-### ConnectWallet
-Wallet connection button with account display
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-### OracleStatus
-Real-time display of BTC price, EMAs, and market signals
+## Supported Wallets
 
-### CreateVault
-Form to create new leverage strategy vault with risk tier selection
+- MetaMask
+- OKX Wallet
+- Coinbase Wallet
+- Rainbow Wallet
+- Trust Wallet
+- WalletConnect (any compatible wallet)
+- And many more...
 
-### VaultList
-Grid display of user's vaults with key metrics
+## Network Configuration
 
-### VaultCard
-Individual vault card showing balance, leverage, and position
+The app is pre-configured for Hardhat Local network:
 
-### VaultActions
-Action panel for deposit, withdraw, supply to Aave, and rebalance
-
-## Hooks
-
-### useWallet
-Manages wallet connection state and MetaMask integration
-
-### useOracle
-Fetches and updates oracle data (price, EMAs, signals)
-
-### useVaults
-Loads user's vaults and their states from the blockchain
-
-## Scripts
-
-```bash
-# Development
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
+```typescript
+{
+  id: 31337,
+  name: 'Hardhat Local',
+  rpcUrls: {
+    default: { http: ['http://127.0.0.1:8545'] }
+  }
+}
 ```
+
+## Contract Addresses
+
+Update contract addresses in `src/contracts/addresses.ts` after deployment.
 
 ## Troubleshooting
 
-### "MetaMask not installed"
-Install MetaMask browser extension
+### OKX Wallet Won't Connect
+- **OKX Wallet requires manual network setup** (doesn't accept HTTP URLs via API)
+- See `OKX_SETUP_INSTRUCTIONS.md` for step-by-step guide
+- Or use the debug page: `http://localhost:5173/debug.html`
 
-### "Contract not deployed"
-Make sure contracts are deployed and addresses are updated in `src/contracts/addresses.ts`
+### MetaMask Connection
+- MetaMask works automatically with network auto-add
+- Just click "Connect Wallet" → "MetaMask" → Approve
 
-### "Transaction failed"
-- Check you have enough ETH for gas
-- Verify you have vBTC balance for deposits
-- Ensure you're connected to the correct network (Hardhat Local)
+### Wallet Won't Connect
+- Ensure Hardhat node is running
+- Check that you're on the correct network (Chain ID: 31337)
+- Try refreshing the page
 
-### "Cannot read properties of undefined"
-- Verify Hardhat node is running
-- Check contract addresses are correct
-- Ensure ABIs are copied from vault-contracts
+### Network Not Found
+- Manually add the Hardhat Local network in your wallet
+- See `OKX_SETUP_INSTRUCTIONS.md` or `WALLET_SETUP.md` for detailed instructions
 
-## Development
+### Transaction Fails
+- Ensure you have ETH in your wallet
+- Check that contracts are deployed
+- Verify contract addresses in `addresses.ts`
 
-### Adding New Features
+## Learn More
 
-1. Create component in `src/components/`
-2. Add hook if needed in `src/hooks/`
-3. Update types in `src/types/contracts.ts`
-4. Add styling in `src/App.css`
-
-### Updating Contract ABIs
-
-After recompiling contracts:
-
-```bash
-# From root directory
-cp vault-contracts/artifacts/contracts/VaultBTC.sol/VaultBTC.json frontend/src/contracts/abis/
-cp vault-contracts/artifacts/contracts/MockAave.sol/MockAave.json frontend/src/contracts/abis/
-cp vault-contracts/artifacts/contracts/OracleEMA.sol/OracleEMA.json frontend/src/contracts/abis/
-cp vault-contracts/artifacts/contracts/LeverageStrategy.sol/LeverageStrategy.json frontend/src/contracts/abis/
-cp vault-contracts/artifacts/contracts/StrategyFactory.sol/StrategyFactory.json frontend/src/contracts/abis/
-```
-
-## License
-
-MIT
+- [RainbowKit Documentation](https://www.rainbowkit.com/)
+- [wagmi Documentation](https://wagmi.sh/)
+- [Viem Documentation](https://viem.sh/)
+- [React Documentation](https://react.dev/)

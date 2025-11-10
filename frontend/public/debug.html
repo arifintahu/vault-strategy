@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Debug</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00cc00;
+        }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Wallet Detection Debug</h1>
+    
+    <div class="section">
+        <h2>Step 1: Check Wallet Installation</h2>
+        <button onclick="checkWallets()">Check Wallets</button>
+        <pre id="wallet-check"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Connect to OKX Wallet</h2>
+        <button onclick="connectOKX()">Connect OKX</button>
+        <pre id="connect-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Step 3: Check Network</h2>
+        <button onclick="checkNetwork()">Check Network</button>
+        <pre id="network-check"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Step 4: Add Hardhat Network</h2>
+        <button onclick="addHardhatNetwork()">Add Hardhat Network</button>
+        <pre id="network-add"></pre>
+    </div>
+
+    <script>
+        function checkWallets() {
+            const output = document.getElementById('wallet-check');
+            const result = {
+                'window.okxwallet exists': !!window.okxwallet,
+                'window.ethereum exists': !!window.ethereum,
+                'ethereum.isOkxWallet': window.ethereum?.isOkxWallet,
+                'ethereum.isMetaMask': window.ethereum?.isMetaMask,
+                'ethereum.providers': window.ethereum?.providers?.length || 0,
+            };
+
+            let html = JSON.stringify(result, null, 2);
+            
+            if (window.okxwallet || window.ethereum?.isOkxWallet) {
+                html += '\n\n<span class="success">✅ OKX Wallet is installed!</span>';
+            } else {
+                html += '\n\n<span class="error">❌ OKX Wallet not detected</span>';
+                html += '\n<span class="warning">Install from: https://www.okx.com/web3</span>';
+            }
+
+            output.innerHTML = html;
+        }
+
+        async function connectOKX() {
+            const output = document.getElementById('connect-result');
+            
+            try {
+                // Try okxwallet first
+                let provider = window.okxwallet || window.ethereum;
+                
+                if (!provider) {
+                    throw new Error('No wallet found');
+                }
+
+                // If multiple providers, find OKX
+                if (provider.providers) {
+                    const okx = provider.providers.find(p => p.isOkxWallet);
+                    if (okx) provider = okx;
+                }
+
+                const accounts = await provider.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                output.innerHTML = `<span class="success">✅ Connected!</span>\n\nAccount: ${accounts[0]}`;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        async function checkNetwork() {
+            const output = document.getElementById('network-check');
+            
+            try {
+                const provider = window.okxwallet || window.ethereum;
+                const chainId = await provider.request({ method: 'eth_chainId' });
+                const chainIdDec = parseInt(chainId, 16);
+                
+                let html = `Current Chain ID: ${chainId} (${chainIdDec})\n\n`;
+                
+                if (chainIdDec === 31337) {
+                    html += '<span class="success">✅ On Hardhat Local network!</span>';
+                } else {
+                    html += '<span class="warning">⚠️ Not on Hardhat network</span>';
+                    html += '\nExpected: 0x7a69 (31337)';
+                }
+                
+                output.innerHTML = html;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        async function addHardhatNetwork() {
+            const output = document.getElementById('network-add');
+            
+            try {
+                const provider = window.okxwallet || window.ethereum;
+                
+                // Try to switch first
+                try {
+                    await provider.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0x7a69' }],
+                    });
+                    output.innerHTML = '<span class="success">✅ Switched to Hardhat network!</span>';
+                    return;
+                } catch (switchError) {
+                    // Network doesn't exist, add it
+                    if (switchError.code === 4902 || switchError.code === -32603) {
+                        await provider.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x7a69',
+                                chainName: 'Hardhat Local',
+                                nativeCurrency: {
+                                    name: 'Ethereum',
+                                    symbol: 'ETH',
+                                    decimals: 18
+                                },
+                                rpcUrls: ['http://127.0.0.1:8545'],
+                                blockExplorerUrls: null
+                            }],
+                        });
+                        output.innerHTML = '<span class="success">✅ Hardhat network added!</span>';
+                    } else {
+                        throw switchError;
+                    }
+                }
+            } catch (error) {
+                let html = `<span class="error">❌ Error: ${error.message}</span>\n\n`;
+                
+                if (error.code === -32602) {
+                    html += '<span class="warning">⚠️ OKX Wallet requires HTTPS URLs</span>\n\n';
+                    html += '<strong>Add network manually in OKX Wallet:</strong>\n';
+                    html += '1. Open OKX Wallet extension\n';
+                    html += '2. Click network dropdown → Manage Networks\n';
+                    html += '3. Click "Add Network Manually"\n';
+                    html += '4. Enter:\n';
+                    html += '   Network Name: Hardhat Local\n';
+                    html += '   RPC URL: http://127.0.0.1:8545\n';
+                    html += '   Chain ID: 31337\n';
+                    html += '   Currency Symbol: ETH\n';
+                    html += '5. Save and switch to it';
+                } else {
+                    html += error.code ? 'Error code: ' + error.code : '';
+                }
+                
+                output.innerHTML = html;
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkWallets, 500);
+        });
+    </script>
+</body>
+</html>
