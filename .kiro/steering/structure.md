@@ -89,14 +89,20 @@ inclusion: always
 
 ## Testing Strategy
 
-- Integration tests in `test/Strategy.t.js`
-- Tests cover full flow: deposit → rebalance on dips → rebalance on rallies
+- Integration tests in `test/Strategy.t.ts` (TypeScript)
+- Tests cover:
+  - Full flow: deposit → rebalance on dips → rebalance on rallies
+  - Multiple users creating isolated vaults
+  - Vault state tracking (collateral, debt, position, leverage)
+  - Access control (owner-only vs public functions)
 - Use helper functions for decimal conversions (`toInt`)
 - Verify leverage changes match expected behavior
+- Use `beforeEach` for test setup to avoid duplication
 
 ## Deployment
 
-- Deploy script in `scripts/deploy.js`
+- Deploy script in `scripts/deploy.ts` (TypeScript)
 - Deployment order: VaultBTC → OracleBands → StrategyFactory
-- Factory constructor requires: vaultBTC, oracle, lending pool, DEX router addresses
+- Factory constructor requires: vaultBTC address, oracle address
 - Users call `factory.createVault(riskTier)` to deploy their own vault
+- Risk tiers: 0=Low, 1=Medium, 2=High

@@ -23,9 +23,11 @@ solidity: {
 
 ## Testing
 
+- **TypeScript** - Type-safe JavaScript
 - **Mocha** - Test framework (60s timeout configured)
 - **Chai** - Assertion library
 - **Ethers.js** - Ethereum library for contract interaction
+- **Typechain** - TypeScript bindings for contracts
 
 ## Common Commands
 
@@ -59,13 +61,17 @@ npm run deploy:local
 - Use `unchecked` blocks for safe arithmetic optimizations
 - Immutable variables for constructor-set addresses
 
-### JavaScript/Testing
+### TypeScript/Testing
 
+- Use TypeScript for all scripts and tests
+- Type imports from `typechain-types` for contract instances
 - Use `async/await` for contract interactions
 - Helper functions for conversions (e.g., `toInt` for 8-decimal precision)
 - BigInt for large numbers: `5n * 10n ** 8n`
 - Always `await` deployment: `await contract.waitForDeployment()`
 - Get addresses with: `await contract.getAddress()`
+- Use `HardhatEthersSigner` type for signers
+- Explicit bigint comparisons: `expect(value).to.equal(10000n)`
 
 ## Numeric Precision
 
