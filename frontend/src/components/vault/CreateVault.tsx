@@ -1,26 +1,30 @@
 import { useState } from 'react';
-import { getSigner, getStrategyFactoryContract } from '../../utils/contracts';
+import { getStrategyFactoryContract } from '../../utils/contracts';
 import { RiskTier, RISK_TIER_NAMES } from '../../types/contracts';
 import type { RiskTierType } from '../../types/contracts';
+import { useSigner } from '../../hooks/useSigner';
 
 interface CreateVaultProps {
   onVaultCreated: () => void;
 }
 
 export const CreateVault = ({ onVaultCreated }: CreateVaultProps) => {
+  const signer = useSigner();
   const [selectedRisk, setSelectedRisk] = useState<RiskTierType>(RiskTier.Medium);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const handleCreate = async () => {
+    if (!signer) return;
+
     setIsCreating(true);
     setError(null);
     setSuccess(false);
 
     try {
-      const signer = await getSigner();
-      const factory = getStrategyFactoryContract(signer);
+      const signerInstance = await signer;
+      const factory = getStrategyFactoryContract(signerInstance);
 
       const tx = await factory.createVault(selectedRisk);
       await tx.wait();

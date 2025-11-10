@@ -342,10 +342,33 @@ body {
 }
 
 .form-group label {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.875rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
+}
+
+.balance-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.input-with-button {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.input-with-button .input {
+  flex: 1;
+}
+
+.max-button {
+  flex-shrink: 0;
+  min-width: 60px;
 }
 
 .input {
