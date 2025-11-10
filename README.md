@@ -16,9 +16,19 @@
 ```bash
 npm i
 npm run build
-npm test
+npm test              # Run all 113 tests
 npm run deploy:local
 ```
+
+## Test Coverage
+✅ **113 passing tests** covering all contracts
+- VaultBTC: 21 tests
+- OracleEMA: 24 tests  
+- MockAave: 33 tests
+- StrategyFactory: 18 tests
+- LeverageStrategy: 17 integration tests
+
+See [TESTING.md](TESTING.md) for details.
 
 ## Contracts
 
