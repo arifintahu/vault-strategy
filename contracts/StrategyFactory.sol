@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "./LeverageStrategy.sol";
+import "./MockAave.sol";
 
 /**
  * @title StrategyFactory
@@ -10,7 +11,8 @@ import "./LeverageStrategy.sol";
  */
 contract StrategyFactory {
     VaultBTC public immutable vaultBTC;
-    IOracleBands public immutable oracle;
+    MockAave public immutable aave;
+    IOracleEMA public immutable oracle;
     
     // Registry of all created vaults
     address[] public allVaults;
@@ -18,8 +20,9 @@ contract StrategyFactory {
     
     event VaultCreated(address indexed owner, address indexed vault, LeverageStrategy.Risk risk, uint256 vaultIndex);
     
-    constructor(VaultBTC _vbtc, IOracleBands _oracle) {
+    constructor(VaultBTC _vbtc, MockAave _aave, IOracleEMA _oracle) {
         vaultBTC = _vbtc;
+        aave = _aave;
         oracle = _oracle;
     }
     
@@ -29,7 +32,7 @@ contract StrategyFactory {
      * @return vault The address of the newly created vault
      */
     function createVault(LeverageStrategy.Risk risk) external returns (address vault) {
-        LeverageStrategy strategy = new LeverageStrategy(vaultBTC, oracle, msg.sender, risk);
+        LeverageStrategy strategy = new LeverageStrategy(vaultBTC, aave, oracle, msg.sender, risk);
         
         vault = address(strategy);
         allVaults.push(vault);

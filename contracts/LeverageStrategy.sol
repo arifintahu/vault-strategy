@@ -3,21 +3,27 @@
 pragma solidity ^0.8.24;
 
 import "./VaultBTC.sol";
+import "./MockAave.sol";
 
-interface IOracleBands {
-    function get() external view returns (int256 price, int256 ma, int256 upper, int256 lower);
+interface IOracleEMA {
+    function get() external view returns (int256 price, int256 ema20, int256 ema50, int256 ema200);
+    function getSignal() external view returns (int8 signal);
+    function isBullish() external view returns (bool);
 }
 
 /**
  * @title LeverageStrategy (demo)
- * @notice Per-user isolated vault that adjusts target leverage between 1.0x and [1.1x..1.5x]
- *         depending on price vs MA bands. Owner controls deposits/withdrawals/risk.
- *         System can trigger rebalance for automated leverage/deleverage.
- *         For demo: tracks synthetic position; production will integrate lending + DEX.
+ * @notice Per-user isolated vault with automated leverage management
+ *         - User deposits stay as vault balance (not immediately used as collateral)
+ *         - System lends vault balance to Aave to earn yield
+ *         - On bullish EMA signals: borrows stablecoin, buys BTC, increases position
+ *         - On bearish signals: sells BTC, repays debt, deleverages
+ *         - Tracks average BTC purchase price for portfolio management
  */
 contract LeverageStrategy {
     VaultBTC public immutable vaultBTC;
-    IOracleBands public oracle;
+    MockAave public immutable aave;
+    IOracleEMA public oracle;
     address public immutable owner;
 
     enum Risk { Low, Medium, High }
@@ -29,17 +35,25 @@ contract LeverageStrategy {
 
     mapping(Risk => Config) public riskCfg;
 
-    // vault accounting
-    uint256 public collateral;      // in vBTC
-    uint256 public debt;            // synthetic debt in stablecoin (8 decimals)
-    uint256 public positionSize;    // synthetic, in vBTC notional
+    // Vault accounting (separated from collateral)
+    uint256 public vaultBalance;        // User's total balance in vault (not yet collateral)
+    uint256 public suppliedToAave;      // Amount supplied to Aave as collateral
+    uint256 public borrowedFromAave;    // Stablecoin debt from Aave (8 decimals)
+    uint256 public btcPosition;         // Total BTC position (supplied + purchased with borrowed funds)
+    
+    // Portfolio tracking
+    uint256 public totalBtcPurchased;   // Total BTC bought with borrowed funds
+    uint256 public totalUsdSpent;       // Total USD spent on BTC purchases (8 decimals)
     uint256 public targetLeverageBps = 10000; // starts at 1.0x
 
     Risk public risk;
 
     event Deposit(address indexed owner, uint256 amount);
     event Withdraw(address indexed owner, uint256 amount);
-    event Rebalance(uint256 oldLevBps, uint256 newLevBps, int256 price, int256 ma, int256 upper, int256 lower);
+    event SupplyToAave(uint256 amount);
+    event BorrowAndBuy(uint256 borrowAmount, uint256 btcBought, uint256 price);
+    event SellAndRepay(uint256 btcSold, uint256 repayAmount, uint256 price);
+    event Rebalance(uint256 oldLevBps, uint256 newLevBps, int256 price, int8 signal);
     event RiskSet(Risk newRisk);
 
     modifier onlyOwner() {
@@ -47,8 +61,15 @@ contract LeverageStrategy {
         _;
     }
 
-    constructor(VaultBTC _vbtc, IOracleBands _oracle, address _owner, Risk _risk) {
+    constructor(
+        VaultBTC _vbtc,
+        MockAave _aave,
+        IOracleEMA _oracle,
+        address _owner,
+        Risk _risk
+    ) {
         vaultBTC = _vbtc;
+        aave = _aave;
         oracle = _oracle;
         owner = _owner;
         risk = _risk;
@@ -63,29 +84,44 @@ contract LeverageStrategy {
         emit RiskSet(r);
     }
 
+    /**
+     * @notice Deposit vBTC to vault (stays as vault balance, not immediately collateral)
+     */
     function deposit(uint256 amount) external onlyOwner {
         require(amount > 0, "ZERO");
-        // pull tokens from owner
         require(vaultBTC.transferFrom(msg.sender, address(this), amount), "XFER_FAIL");
-        collateral += amount;
-
-        // adjust synthetic position to maintain current target leverage
-        positionSize = (collateral * targetLeverageBps) / 10000;
+        vaultBalance += amount;
         emit Deposit(msg.sender, amount);
     }
 
+    /**
+     * @notice Withdraw vBTC from vault (must have sufficient free balance)
+     */
     function withdraw(uint256 amount) external onlyOwner {
-        require(amount > 0 && collateral >= amount, "AMT_INV");
-        collateral -= amount;
-        // adjust synthetic position to maintain current target leverage
-        if (collateral == 0) {
-            positionSize = 0;
-            debt = 0;
-        } else {
-            positionSize = (collateral * targetLeverageBps) / 10000;
-        }
+        require(amount > 0, "ZERO");
+        uint256 freeBalance = vaultBalance - suppliedToAave;
+        require(freeBalance >= amount, "INSUFFICIENT_FREE");
+        
+        vaultBalance -= amount;
         require(vaultBTC.transfer(msg.sender, amount), "XFER_FAIL");
         emit Withdraw(msg.sender, amount);
+    }
+
+    /**
+     * @notice Supply vault balance to Aave to earn yield
+     */
+    function supplyToAave(uint256 amount) public {
+        require(amount > 0, "ZERO");
+        uint256 freeBalance = vaultBalance - suppliedToAave;
+        require(freeBalance >= amount, "INSUFFICIENT_FREE");
+        
+        // Approve and supply to Aave
+        vaultBTC.approve(address(aave), amount);
+        aave.supply(amount);
+        
+        suppliedToAave += amount;
+        btcPosition += amount;
+        emit SupplyToAave(amount);
     }
 
     function _clamp(uint256 x, uint256 lo, uint256 hi) internal pure returns (uint256) {
@@ -94,55 +130,127 @@ contract LeverageStrategy {
         return x;
     }
 
-    /// @notice Adjust target leverage based on oracle bands (callable by anyone/system)
-    /// if price < lower -> increase leverage by step, up to max for risk
-    /// if price > upper -> decrease leverage by step, down to 1.0x
-    /// In production: this will trigger lending supply/borrow and DEX swaps
+    /**
+     * @notice Rebalance strategy based on EMA signals
+     *         Bullish: borrow stablecoin, buy BTC, increase leverage
+     *         Bearish: sell BTC, repay debt, decrease leverage
+     */
     function rebalance() external {
-        (int256 price, int256 ma, int256 upper, int256 lower) = oracle.get();
+        require(suppliedToAave > 0, "NO_COLLATERAL");
+        
+        (int256 price, , , ) = oracle.get();
+        int8 signal = oracle.getSignal();
         uint256 old = targetLeverageBps;
         Config memory cfg = riskCfg[risk];
 
-        if (price <= lower) {
-            // dip: increase leverage (borrow more stablecoin, swap to BTC)
+        // Bullish signal: increase leverage
+        if (signal > 0 && targetLeverageBps < cfg.maxBps) {
             uint256 next = old + cfg.stepBps;
             targetLeverageBps = _clamp(next, 10000, cfg.maxBps);
-        } else if (price >= upper) {
-            // rally: take profit & deleverage (sell BTC, repay debt)
-            if (old > 10000) {
-                uint256 next = old > cfg.stepBps ? old - cfg.stepBps : 10000;
-                targetLeverageBps = _clamp(next, 10000, cfg.maxBps);
-            }
+            
+            // Execute: borrow and buy BTC
+            _borrowAndBuy(uint256(price));
         }
-        // recompute synthetic position & debt
-        positionSize = (collateral * targetLeverageBps) / 10000;
-        // synthetic debt = (positionSize - collateral) converted to stablecoin value
-        if (positionSize > collateral) {
-            debt = (positionSize - collateral) * uint256(price) / 1e8;
-        } else {
-            debt = 0;
+        // Bearish signal: decrease leverage
+        else if (signal < 0 && targetLeverageBps > 10000) {
+            uint256 next = old > cfg.stepBps ? old - cfg.stepBps : 10000;
+            targetLeverageBps = _clamp(next, 10000, cfg.maxBps);
+            
+            // Execute: sell BTC and repay debt
+            _sellAndRepay(uint256(price));
         }
-        emit Rebalance(old, targetLeverageBps, price, ma, upper, lower);
+        
+        emit Rebalance(old, targetLeverageBps, price, signal);
     }
 
+    /**
+     * @notice Borrow stablecoin from Aave and simulate buying BTC
+     */
+    function _borrowAndBuy(uint256 btcPrice) internal {
+        // Calculate how much to borrow based on target leverage
+        uint256 targetPosition = (suppliedToAave * targetLeverageBps) / 10000;
+        
+        if (targetPosition <= btcPosition) return;
+        
+        uint256 additionalBtcNeeded = targetPosition - btcPosition;
+        uint256 borrowAmount = (additionalBtcNeeded * btcPrice) / 1e8;
+        
+        // Borrow from Aave
+        aave.borrow(borrowAmount, btcPrice);
+        borrowedFromAave += borrowAmount;
+        
+        // Simulate buying BTC with borrowed stablecoin
+        btcPosition += additionalBtcNeeded;
+        totalBtcPurchased += additionalBtcNeeded;
+        totalUsdSpent += borrowAmount;
+        
+        emit BorrowAndBuy(borrowAmount, additionalBtcNeeded, btcPrice);
+    }
+
+    /**
+     * @notice Sell BTC and repay debt to Aave
+     */
+    function _sellAndRepay(uint256 btcPrice) internal {
+        if (borrowedFromAave == 0) return;
+        
+        // Calculate how much BTC to sell based on target leverage
+        uint256 targetPosition = (suppliedToAave * targetLeverageBps) / 10000;
+        
+        if (targetPosition >= btcPosition) return;
+        
+        uint256 btcToSell = btcPosition - targetPosition;
+        uint256 usdReceived = (btcToSell * btcPrice) / 1e8;
+        
+        // Cap repayment to actual debt
+        uint256 repayAmount = usdReceived > borrowedFromAave ? borrowedFromAave : usdReceived;
+        uint256 actualBtcSold = (repayAmount * 1e8) / btcPrice;
+        
+        // Simulate selling BTC
+        btcPosition -= actualBtcSold;
+        
+        // Repay to Aave
+        aave.repay(repayAmount);
+        borrowedFromAave -= repayAmount;
+        
+        emit SellAndRepay(actualBtcSold, repayAmount, btcPrice);
+    }
+
+    /**
+     * @notice Get current leverage in basis points
+     */
     function currentLeverageBps() external view returns (uint256) {
-        if (collateral == 0) return 0;
-        return (positionSize * 10000) / collateral;
+        if (suppliedToAave == 0) return 0;
+        return (btcPosition * 10000) / suppliedToAave;
     }
     
+    /**
+     * @notice Get average BTC purchase price
+     */
+    function averageBtcPrice() external view returns (uint256) {
+        if (totalBtcPurchased == 0) return 0;
+        return (totalUsdSpent * 1e8) / totalBtcPurchased;
+    }
+    
+    /**
+     * @notice Get vault state
+     */
     function getVaultState() external view returns (
-        uint256 _collateral,
-        uint256 _debt,
-        uint256 _positionSize,
+        uint256 _vaultBalance,
+        uint256 _suppliedToAave,
+        uint256 _borrowedFromAave,
+        uint256 _btcPosition,
         uint256 _targetLeverageBps,
         uint256 _currentLeverageBps,
+        uint256 _avgBtcPrice,
         Risk _risk
     ) {
-        _collateral = collateral;
-        _debt = debt;
-        _positionSize = positionSize;
+        _vaultBalance = vaultBalance;
+        _suppliedToAave = suppliedToAave;
+        _borrowedFromAave = borrowedFromAave;
+        _btcPosition = btcPosition;
         _targetLeverageBps = targetLeverageBps;
-        _currentLeverageBps = collateral > 0 ? (positionSize * 10000) / collateral : 0;
+        _currentLeverageBps = suppliedToAave > 0 ? (btcPosition * 10000) / suppliedToAave : 0;
+        _avgBtcPrice = totalBtcPurchased > 0 ? (totalUsdSpent * 1e8) / totalBtcPurchased : 0;
         _risk = risk;
     }
 }

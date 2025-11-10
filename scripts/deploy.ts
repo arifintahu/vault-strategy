@@ -13,22 +13,29 @@ async function main(): Promise<void> {
   const vbtcAddress = await vbtc.getAddress();
   console.log("VaultBTC:", vbtcAddress);
 
-  // Deploy Oracle with initial bands
-  // price=60k, ma=60k, upper=63k (+5%), lower=57k (-5%)
-  const Oracle = await ethers.getContractFactory("OracleBands");
+  // Deploy MockAave
+  const MockAave = await ethers.getContractFactory("MockAave");
+  const aave = await MockAave.deploy(vbtcAddress);
+  await aave.waitForDeployment();
+  const aaveAddress = await aave.getAddress();
+  console.log("MockAave:", aaveAddress);
+
+  // Deploy Oracle with initial EMAs
+  // price=60k, ema20=59k, ema50=58k, ema200=55k (bullish setup)
+  const Oracle = await ethers.getContractFactory("OracleEMA");
   const oracle = await Oracle.deploy(
-    toInt(60000), 
-    toInt(60000), 
-    toInt(63000), 
-    toInt(57000)
+    toInt(60000),  // current price
+    toInt(59000),  // 20-day EMA
+    toInt(58000),  // 50-day EMA
+    toInt(55000)   // 200-day EMA
   );
   await oracle.waitForDeployment();
   const oracleAddress = await oracle.getAddress();
-  console.log("OracleBands:", oracleAddress);
+  console.log("OracleEMA:", oracleAddress);
 
   // Deploy StrategyFactory
   const Factory = await ethers.getContractFactory("StrategyFactory");
-  const factory = await Factory.deploy(vbtcAddress, oracleAddress);
+  const factory = await Factory.deploy(vbtcAddress, aaveAddress, oracleAddress);
   await factory.waitForDeployment();
   const factoryAddress = await factory.getAddress();
   console.log("StrategyFactory:", factoryAddress);
@@ -40,7 +47,8 @@ async function main(): Promise<void> {
 
   console.log("\n=== Deployment Summary ===");
   console.log("VaultBTC:", vbtcAddress);
-  console.log("OracleBands:", oracleAddress);
+  console.log("MockAave:", aaveAddress);
+  console.log("OracleEMA:", oracleAddress);
   console.log("StrategyFactory:", factoryAddress);
   console.log("\nTo create a vault, call: factory.createVault(riskTier)");
   console.log("Risk tiers: 0=Low, 1=Medium, 2=High");

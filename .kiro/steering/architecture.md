@@ -6,7 +6,7 @@ inclusion: always
 
 ## System Overview
 
-The Vault Strategy uses a factory pattern where each user deploys their own isolated vault contract. The system automatically adjusts leverage based on price movements relative to MA bands, while maintaining user custody of funds.
+The Vault Strategy uses a factory pattern where each user deploys their own isolated vault contract. The system automatically adjusts leverage based on EMA signals (20/50/200-day), while maintaining user custody of funds. User deposits stay as vault balance and are supplied to Aave for yield, with the system managing leverage through borrowing and simulated BTC purchases.
 
 ## Factory Pattern
 
@@ -26,32 +26,41 @@ Users create isolated vaults via `StrategyFactory.createVault(riskTier)`:
 
 ### LeverageStrategy.sol
 - Per-user isolated vault (created by factory)
-- **Owner-only**: deposit, withdraw, setRisk
+- **Owner-only**: deposit, withdraw, setRisk, supplyToAave
 - **System-callable**: rebalance (automated leverage/deleverage)
 - **Risk tiers**: Low/Medium/High with different max leverage and step sizes
-- **Rebalance logic**: adjusts `targetLeverageBps` based on price vs bands
-- **Position tracking**: tracks collateral, debt, and current leverage
+- **Rebalance logic**: adjusts `targetLeverageBps` based on EMA signals
+- **Position tracking**: tracks vault balance, supplied collateral, debt, BTC position, average price
 
 ### VaultBTC.sol
 - Minimal ERC20 implementation (8 decimal precision)
 - Public `mint()` and `burn()` functions (demo only)
 - In production: replace with real vault token from Bitcoin bridge
 
-### OracleBands.sol
-- Owner-updatable price oracle (demo)
-- Stores: spot price, MA, upper band, lower band
+### MockAave.sol
+- Simplified Aave-like lending pool (demo)
+- Functions: supply, withdraw, borrow, repay
+- 75% LTV (collateral factor), 80% liquidation threshold
+- Tracks supplied collateral and borrowed debt per user
+- In production: replace with real Aave/Spark integration
+
+### OracleEMA.sol
+- Owner-updatable EMA oracle (demo)
+- Stores: spot price, 20-day EMA, 50-day EMA, 200-day EMA
+- Provides signal detection: strong bullish (+2) to strong bearish (-2)
 - All values use 8 decimal precision
-- In production: replace with Chainlink/TWAP oracle
+- In production: replace with Chainlink + on-chain EMA calculation
 
 ## Access Control Model
 
 ### Owner-Only Functions
-- `deposit()` - Add vaultBTC collateral
-- `withdraw()` - Remove vaultBTC collateral
+- `deposit()` - Add vaultBTC to vault balance
+- `withdraw()` - Remove vaultBTC from free balance (not supplied to Aave)
 - `setRisk()` - Change risk tier (Low/Medium/High)
+- `supplyToAave()` - Supply vault balance to Aave as collateral
 
 ### Public/System Functions
-- `rebalance()` - Adjust leverage based on price bands (callable by keepers/bots)
+- `rebalance()` - Adjust leverage based on EMA signals (callable by keepers/bots)
 
 This separation allows:
 - Users maintain full control over their funds
@@ -62,15 +71,27 @@ This separation allows:
 
 ### Core Algorithm
 
-The strategy compares spot price to MA bands and adjusts target leverage:
+The strategy uses EMA signals to adjust target leverage:
 
 ```
-if (price <= lowerBand):
+signal = oracle.getSignal()  // -2 to +2 based on price vs EMAs
+
+if (signal > 0):  // Bullish
     targetLeverage += stepSize  // up to maxLeverage for risk tier
+    borrowAndBuy()  // Borrow stablecoin, buy BTC
     
-if (price >= upperBand):
+if (signal < 0):  // Bearish
     targetLeverage -= stepSize  // down to 1.0x
+    sellAndRepay()  // Sell BTC, repay debt
 ```
+
+### EMA Signal Detection
+
+- **Strong Bullish (+2)**: Price above all EMAs (20, 50, 200)
+- **Bullish (+1)**: Price above 20 and 50 EMAs
+- **Neutral (0)**: Mixed signals
+- **Bearish (-1)**: Price below 20 and 50 EMAs
+- **Strong Bearish (-2)**: Price below all EMAs
 
 ### Risk Tier Parameters
 
@@ -84,18 +105,20 @@ if (price >= upperBand):
 
 **Demo (Current)**
 1. `rebalance()` called by keeper/system
-2. Oracle provides: price, MA, upper band, lower band
-3. Strategy calculates new `targetLeverageBps`
-4. Updates synthetic `positionSize` and `debt`
-5. Emits `Rebalance` event
+2. Oracle provides: price, ema20, ema50, ema200, signal
+3. Strategy calculates new `targetLeverageBps` based on signal
+4. **If bullish**: `_borrowAndBuy()` - borrows from Aave, simulates BTC purchase
+5. **If bearish**: `_sellAndRepay()` - simulates BTC sale, repays Aave debt
+6. Updates `btcPosition`, `borrowedFromAave`, tracks average BTC price
+7. Emits `Rebalance` event with leverage and signal
 
 **Production (Future)**
 1. `rebalance()` called by keeper/system
-2. Oracle provides: price, MA, upper band, lower band
-3. Strategy calculates new `targetLeverageBps`
+2. Oracle provides: price, ema20, ema50, ema200, signal
+3. Strategy calculates new `targetLeverageBps` based on signal
 4. Adapter module executes the leverage change:
-   - **Increase leverage**: Supply BTC → Borrow stablecoin → Swap to BTC → Repeat
-   - **Decrease leverage**: Withdraw BTC → Swap to stablecoin → Repay debt → Repeat
+   - **Increase leverage**: Borrow stablecoin from Aave → Swap to BTC via DEX → Track position
+   - **Decrease leverage**: Swap BTC to stablecoin via DEX → Repay Aave debt
 5. Adapter reports fill data for PnL tracking
 6. Emits `Rebalance` event with execution details
 
@@ -114,11 +137,14 @@ if (price >= upperBand):
 4. Repeat until target leverage reached
 
 ### Demo Implementation
-Current demo uses synthetic accounting:
-- `collateral` - user's vaultBTC deposit
-- `positionSize` - synthetic total position (collateral × leverage)
-- `debt` - synthetic stablecoin debt
-- No actual lending/DEX calls (for testing logic only)
+Current demo uses MockAave and simulated swaps:
+- `vaultBalance` - user's total balance in vault
+- `suppliedToAave` - amount supplied to MockAave as collateral
+- `borrowedFromAave` - stablecoin debt from MockAave
+- `btcPosition` - total BTC position (supplied + purchased)
+- `totalBtcPurchased` - tracks BTC bought with leverage
+- `totalUsdSpent` - tracks USD spent on purchases
+- Simulated BTC purchases/sales (no real DEX calls)
 
 ## Intent-Based Architecture
 
@@ -152,9 +178,10 @@ Add `IAdapter.executeTargetLeverage(targetBps)`:
 - Slippage protection required
 
 ### Oracle
-- Current: `OracleBands` (demo, owner-updatable)
-- Production: Chainlink price feeds + TWAP fallback
+- Current: `OracleEMA` (demo, owner-updatable with 20/50/200-day EMAs)
+- Production: Chainlink price feeds + on-chain EMA calculation or off-chain with verification
 - Must include circuit breakers for price manipulation
+- EMA updates should be rate-limited and validated
 
 ## Safety Considerations
 
@@ -196,7 +223,8 @@ flowchart TB
     
     subgraph Core
         VB[VaultBTC Token]
-        O[OracleBands<br/>Price & MA Bands]
+        A[MockAave<br/>Lending Pool]
+        O[OracleEMA<br/>Price & EMAs]
     end
     
     subgraph Keepers
@@ -204,8 +232,8 @@ flowchart TB
     end
     
     subgraph Future
-        A[Adapter Module]
-        L[Lending Platform<br/>Aave/Spark]
+        AD[Adapter Module]
+        L[Real Aave/Spark]
         D[DEX<br/>Uniswap/Curve]
     end
     
@@ -221,24 +249,32 @@ flowchart TB
     U2 -->|deposit/withdraw| V2
     U3 -->|deposit/withdraw| V3
     
-    VB -.->|collateral| V1
-    VB -.->|collateral| V2
-    VB -.->|collateral| V3
+    VB -.->|vault balance| V1
+    VB -.->|vault balance| V2
+    VB -.->|vault balance| V3
     
-    O -.->|price data| V1
-    O -.->|price data| V2
-    O -.->|price data| V3
+    V1 -->|supply| A
+    V2 -->|supply| A
+    V3 -->|supply| A
+    
+    A -.->|borrow/repay| V1
+    A -.->|borrow/repay| V2
+    A -.->|borrow/repay| V3
+    
+    O -.->|EMA signals| V1
+    O -.->|EMA signals| V2
+    O -.->|EMA signals| V3
     
     K -->|rebalance| V1
     K -->|rebalance| V2
     K -->|rebalance| V3
     
-    V1 -.->|intent| A
-    V2 -.->|intent| A
-    V3 -.->|intent| A
+    V1 -.->|intent| AD
+    V2 -.->|intent| AD
+    V3 -.->|intent| AD
     
-    A -.->|supply/borrow| L
-    A -.->|swap| D
+    AD -.->|supply/borrow| L
+    AD -.->|swap| D
     
     style V1 fill:#e1f5ff
     style V2 fill:#fff4e1
@@ -253,51 +289,41 @@ flowchart TB
 sequenceDiagram
     participant User
     participant Vault as LeverageStrategy
-    participant Oracle as OracleBands
+    participant Aave as MockAave
+    participant Oracle as OracleEMA
     participant Keeper
-    participant Adapter
-    participant Lending as Aave/Spark
-    participant DEX as Uniswap
     
     User->>Vault: deposit(vaultBTC)
-    Note over Vault: collateral += amount<br/>leverage = 1.0x
+    Note over Vault: vaultBalance += amount
+    
+    User->>Vault: supplyToAave(amount)
+    Vault->>Aave: supply(vaultBTC)
+    Note over Vault: suppliedToAave += amount<br/>btcPosition += amount
     
     loop Automated Rebalancing
         Keeper->>Oracle: get()
-        Oracle-->>Keeper: price, MA, bands
+        Oracle-->>Keeper: price, ema20, ema50, ema200
+        Keeper->>Oracle: getSignal()
+        Oracle-->>Keeper: signal (+2 to -2)
         
-        alt Price Dips Below Lower Band
+        alt Bullish Signal (price above EMAs)
             Keeper->>Vault: rebalance()
             Note over Vault: targetLeverage += step
-            Vault->>Adapter: executeIncrease(targetBps)
-            
-            loop Until Target Reached
-                Adapter->>Lending: supply(vaultBTC)
-                Adapter->>Lending: borrow(stablecoin)
-                Adapter->>DEX: swap(stablecoin → vaultBTC)
-            end
-            
-            Adapter-->>Vault: execution report
+            Vault->>Aave: borrow(stablecoin, price)
+            Note over Vault: Simulate: buy BTC<br/>btcPosition += btcBought<br/>track avg price
             Vault-->>Keeper: Rebalance event
         
-        else Price Rallies Above Upper Band
+        else Bearish Signal (price below EMAs)
             Keeper->>Vault: rebalance()
             Note over Vault: targetLeverage -= step
-            Vault->>Adapter: executeDecrease(targetBps)
-            
-            loop Until Target Reached
-                Adapter->>Lending: withdraw(vaultBTC)
-                Adapter->>DEX: swap(vaultBTC → stablecoin)
-                Adapter->>Lending: repay(stablecoin)
-            end
-            
-            Adapter-->>Vault: execution report
+            Note over Vault: Simulate: sell BTC<br/>btcPosition -= btcSold
+            Vault->>Aave: repay(stablecoin)
             Vault-->>Keeper: Rebalance event
         end
     end
     
-    User->>Vault: withdraw(amount)
-    Note over Vault: collateral -= amount
+    User->>Vault: withdraw(freeBalance)
+    Note over Vault: vaultBalance -= amount
     Vault-->>User: transfer vaultBTC
 ```
 
@@ -347,14 +373,14 @@ flowchart LR
 ```
 ├── contracts/
 │   ├── VaultBTC.sol                # ERC20 token (demo)
-│   ├── OracleBands.sol             # Price oracle (demo)
+│   ├── MockAave.sol                # Lending pool (demo)
+│   ├── OracleEMA.sol               # EMA oracle (demo)
 │   ├── LeverageStrategy.sol        # Per-user vault
-│   ├── StrategyFactory.sol         # Factory for vaults
-│   └── interfaces/                 # Contract interfaces
+│   └── StrategyFactory.sol         # Factory for vaults
 ├── scripts/
 │   └── deploy.ts                   # Deployment script
 ├── test/
-│   └── Strategy.t.ts               # Integration tests
+│   └── VaultStrategy.t.ts          # Integration tests
 ├── typechain-types/                # Generated types
 ├── hardhat.config.ts               # Hardhat config
 ├── tsconfig.json                   # TypeScript config
@@ -379,7 +405,8 @@ flowchart LR
 
 ### Deployment
 
-- Deploy order: VaultBTC → OracleBands → StrategyFactory
-- Factory constructor requires: vaultBTC address, oracle address
+- Deploy order: VaultBTC → MockAave → OracleEMA → StrategyFactory
+- Factory constructor requires: vaultBTC address, aave address, oracle address
 - Users call `factory.createVault(riskTier)` to deploy vault
 - Risk tiers: 0=Low, 1=Medium, 2=High
+- After vault creation: deposit vBTC, then call `supplyToAave()` to start earning yield
