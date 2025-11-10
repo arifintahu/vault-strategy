@@ -55,6 +55,19 @@ See [TESTING.md](TESTING.md) for details.
 - **Bearish (signal=-1)**: Price below 20 and 50 EMAs
 - **Strong Bearish (signal=-2)**: Price below all EMAs
 
+## Scripts
+
+Comprehensive scripts for interacting with contracts:
+
+```bash
+npm run simulate        # Full end-to-end simulation
+npm run query          # Query all contract states
+npm run oracle:update  # Update oracle with market data
+npm run aave:supply    # Supply and borrow from Aave
+```
+
+See [SCRIPTS.md](SCRIPTS.md) for detailed documentation.
+
 ## Usage Example
 
 ```typescript

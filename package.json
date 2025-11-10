@@ -5,7 +5,11 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.ts"
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "simulate": "hardhat run scripts/simulate.ts",
+    "query": "hardhat run scripts/query-state.ts",
+    "oracle:update": "hardhat run scripts/update-oracle.ts",
+    "aave:supply": "hardhat run scripts/supply-aave.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
