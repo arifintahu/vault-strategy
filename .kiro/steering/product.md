@@ -4,7 +4,11 @@ inclusion: always
 
 # Product Overview
 
-**vaultBTC Auto-Leverage Strategy** - A DeFi protocol that provides automated, rule-based leverage management for Bitcoin holders.
+**vaultBTC Auto-Leverage Strategy** - A DeFi protocol that provides automated, rule-based leverage management for Bitcoin holders with self-custody guarantees.
+
+## Problem Statement
+
+BTC holders want delta exposure with smoother drawdowns and automated profit-taking, **without giving up self-custody**. Existing leverage tools are manual, centralized, or depend on wrapped BTC.
 
 ## Core Concept
 
@@ -41,12 +45,27 @@ This is a **demo implementation** on Ethereum using Hardhat. It uses:
 - Mock oracle for price/MA bands
 - Simplified accounting without production safety features
 
+## Novelty
+
+- **AI-ish, rule-based auto-leverage** tied to MA bands (pluggable to smarter agents later)
+- **Self-custody forward-compatibility**: designed to work with trustless vaultBTC as soon as it's live
+- **Risk-tiered 1.0–1.5x envelope** reduces liquidation risk while still enhancing returns
+- **Per-user isolated vaults** via factory pattern for maximum control
+
 ## Production Requirements
 
 Replace demo components with:
-- Chainlink/TWAP oracles with failovers
-- Real lending platform integration (Aave, Spark, Compound)
-- DEX integration for stablecoin ↔ BTC swaps (Uniswap, Curve)
-- Slippage bounds, health factor monitoring, liquidation protection
-- Keeper system for automated rebalancing
-- Circuit breakers and emergency pause functionality
+- **Oracles**: Chainlink + TWAP failovers; freeze on deviation
+- **Lending**: Real lending platform integration (Aave, Spark, Compound)
+- **DEX**: Integration for stablecoin ↔ BTC swaps (Uniswap, Curve)
+- **Execution**: Adapters must enforce slippage bounds, rate limits, and keeper bonds; pausable with a timelock
+- **Accounting**: Withdrawal queues & epoch-based PnL accounting; invariant checks each rebalance
+- **Safety**: Health factor monitoring, liquidation protection, circuit breakers
+
+## Porting to Bitcoin Trustless Vaults
+
+Assume the real BTC is in a **trustless vault** and `vaultBTC` = the minted representation on the app chain:
+- Users keep native BTC custody guarantees; redemptions are enforced by BitVM3 proofs on Bitcoin
+- The strategy & adapters run on the app chain exactly as in Ethereum; only the token backing changes
+- Bitcoin redemption is independent from the strategy logic
+- Simply swap `VaultBTC` address to the real bridge token; keep oracle & adapter stack identical
