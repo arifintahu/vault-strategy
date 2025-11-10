@@ -1,109 +1,209 @@
+# Vault Strategy
 
-# Vault Strategy — Demo (Ethereum)
+A DeFi protocol for automated, EMA-based leverage management for Bitcoin holders with self-custody guarantees.
 
-> Minimal, open-source demonstration for a *Bitcoin trustless vaults–ready* DeFi idea. We assume **`vaultBTC` is an ERC20** that represents users' BTC positions. This repo shows a working demo on Ethereum (local Hardhat) with a strategy that **automatically manages leverage based on EMA signals** - increasing position on bullish trends and taking profit on bearish signals.
+## 🏗️ Monorepo Structure
 
-## Key Features
-
-- **Vault Balance Separation**: User deposits stay as vault balance, not immediately used as collateral
-- **Aave Integration**: System lends vault balance to Aave to earn yield
-- **EMA-Based Signals**: Uses 20-day, 50-day, and 200-day EMAs for bullish/bearish detection
-- **Automated Leverage**: Borrows stablecoin and buys BTC on bullish signals, sells and repays on bearish signals
-- **Portfolio Tracking**: Tracks average BTC purchase price and position metrics
-- **Risk Tiers**: Low (1.1x max), Medium (1.3x max), High (1.5x max)
-
-## Quickstart
-```bash
-npm i
-npm run build
-npm test              # Run all 113 tests
-npm run deploy:local
+```
+vault-strategy/
+├── vault-contracts/     # Smart contracts (Hardhat)
+│   ├── contracts/      # Solidity contracts
+│   ├── scripts/        # Deployment & interaction scripts
+│   ├── test/           # Contract tests (113 tests)
+│   └── README.md
+├── frontend/           # React + TypeScript frontend
+│   ├── src/           # Frontend source code
+│   ├── public/        # Static assets
+│   └── README.md
+└── README.md          # This file
 ```
 
-## Test Coverage
-✅ **113 passing tests** covering all contracts
-- VaultBTC: 21 tests
-- OracleEMA: 24 tests  
-- MockAave: 33 tests
-- StrategyFactory: 18 tests
-- LeverageStrategy: 17 integration tests
+## 🚀 Quick Start
 
-See [TESTING.md](TESTING.md) for details.
+### Prerequisites
+- Node.js 18+
+- npm or yarn
 
-## Contracts
-
-- `VaultBTC.sol`: Minimal ERC20 (demo stand-in for vaultBTC)
-- `MockAave.sol`: Simplified Aave-like lending pool for supply, borrow, repay
-- `OracleEMA.sol`: Oracle with 20/50/200-day EMAs and bullish/bearish signal detection
-- `LeverageStrategy.sol`: Per-user vault with automated leverage management
-- `StrategyFactory.sol`: Factory for creating isolated user vaults
-
-## How It Works
-
-1. **User deposits vBTC** → stays as vault balance (not collateral)
-2. **System supplies to Aave** → earns yield on idle balance
-3. **Oracle checks EMAs** → detects bullish/bearish signals
-4. **On bullish signal** → borrows stablecoin, buys BTC, increases leverage
-5. **On bearish signal** → sells BTC, repays debt, decreases leverage
-6. **Tracks portfolio** → average BTC price, total position, leverage ratio
-
-## EMA Signal Logic
-
-- **Strong Bullish (signal=2)**: Price above all EMAs (20, 50, 200)
-- **Bullish (signal=1)**: Price above 20 and 50 EMAs
-- **Neutral (signal=0)**: Mixed signals
-- **Bearish (signal=-1)**: Price below 20 and 50 EMAs
-- **Strong Bearish (signal=-2)**: Price below all EMAs
-
-## Scripts
-
-Comprehensive scripts for interacting with contracts:
+### Setup Contracts
 
 ```bash
+cd vault-contracts
+npm install
+npm run build
+npm test              # Run 113 tests
+npm run simulate      # Run full simulation
+```
+
+### Setup Frontend
+
+```bash
+cd frontend
+npm create vite@latest . -- --template react-ts
+npm install
+npm install ethers @tanstack/react-query wagmi viem
+npm run dev
+```
+
+## 📦 Contracts
+
+The smart contract suite includes:
+
+- **VaultBTC** - ERC20 token (8 decimals, BTC-style)
+- **MockAave** - Simplified lending pool
+- **OracleEMA** - EMA oracle with signal detection
+- **LeverageStrategy** - Per-user vault with automated leverage
+- **StrategyFactory** - Factory for creating isolated vaults
+
+### Key Features
+
+✅ **Vault Balance Separation** - Deposits stay as vault balance  
+✅ **EMA-Based Signals** - 20/50/200-day EMAs for trend detection  
+✅ **Automated Leverage** - Increases on bullish, decreases on bearish  
+✅ **Risk Tiers** - Low (1.1x), Medium (1.3x), High (1.5x)  
+✅ **Portfolio Tracking** - Average BTC price and position metrics  
+✅ **Self-Custody Compatible** - Designed for Bitcoin trustless vaults  
+
+## 🧪 Testing
+
+All contracts have comprehensive test coverage:
+
+```bash
+cd vault-contracts
+npm test
+```
+
+**113 passing tests:**
+- VaultBTC: 21 tests
+- OracleEMA: 24 tests
+- MockAave: 33 tests
+- StrategyFactory: 18 tests
+- VaultStrategy: 17 tests
+
+## 📜 Scripts
+
+Interactive scripts for contract interaction:
+
+```bash
+cd vault-contracts
+
 npm run simulate        # Full end-to-end simulation
 npm run query          # Query all contract states
 npm run oracle:update  # Update oracle with market data
 npm run aave:supply    # Supply and borrow from Aave
 ```
 
-See [SCRIPTS.md](SCRIPTS.md) for detailed documentation.
+## 🎨 Frontend (Coming Soon)
 
-## Usage Example
+React + TypeScript frontend with:
 
-```typescript
-// Create a vault with Medium risk (1.3x max leverage)
-await factory.createVault(1);
+- Wallet connection (MetaMask, WalletConnect)
+- Create and manage vaults
+- Deposit/withdraw vBTC
+- Supply to Aave
+- View vault metrics and leverage
+- Monitor oracle signals
+- Trigger rebalancing
 
-// Deposit vBTC to vault
-await vbtc.approve(vaultAddress, amount);
-await vault.deposit(amount);
+## 📚 Documentation
 
-// Supply to Aave to start earning yield
-await vault.supplyToAave(amount);
+### Contracts
+- [vault-contracts/README.md](vault-contracts/README.md) - Contract documentation
+- [vault-contracts/SCRIPTS.md](vault-contracts/SCRIPTS.md) - Script guide
+- [vault-contracts/TESTING.md](vault-contracts/TESTING.md) - Testing guide
+- [vault-contracts/SUMMARY.md](vault-contracts/SUMMARY.md) - Project summary
 
-// System automatically rebalances based on EMA signals
-await vault.rebalance(); // Anyone can call
+### Architecture
+- [vault-contracts/.kiro/steering/product.md](vault-contracts/.kiro/steering/product.md) - Product overview
+- [vault-contracts/.kiro/steering/architecture.md](vault-contracts/.kiro/steering/architecture.md) - System architecture
+- [vault-contracts/.kiro/steering/development.md](vault-contracts/.kiro/steering/development.md) - Development guide
 
-// Check vault state
-const state = await vault.getVaultState();
-console.log("Leverage:", state._currentLeverageBps / 100, "%");
-console.log("Avg BTC Price:", state._avgBtcPrice);
+## 🔧 Technology Stack
+
+### Contracts
+- Solidity 0.8.24
+- Hardhat
+- TypeScript
+- Ethers.js
+- Mocha/Chai
+
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- Ethers.js / Wagmi
+- TanStack Query
+
+## 🌐 Deployment
+
+### Local Development
+
+```bash
+# Terminal 1: Start Hardhat node
+cd vault-contracts
+npx hardhat node
+
+# Terminal 2: Deploy contracts
+npm run deploy:local
+
+# Terminal 3: Start frontend
+cd frontend
+npm run dev
 ```
 
-## Security Considerations (demo level)
+### Testnet Deployment
 
-- Simplified Aave mock (no real lending protocol integration)
-- Owner-updatable oracle (replace with Chainlink/TWAP in production)
-- No slippage protection or DEX integration (simulated swaps)
-- Real system needs: health factor monitoring, liquidation protection, circuit breakers
+```bash
+cd vault-contracts
+npx hardhat run scripts/deploy.ts --network sepolia
+```
 
-## Porting to Bitcoin Trustless Vaults
+## 🛣️ Roadmap
 
-- Keep `LeverageStrategy` unchanged on target app-chain
-- Replace `VaultBTC` with the real vault token (mint/burn gated by Bitcoin proof flows)
-- Replace `MockAave` with real Aave/Spark integration
-- Replace `OracleEMA` with Chainlink price feeds + EMA calculation
-- Rebalance/withdraw flows stay the same; redemption on Bitcoin happens via the vault's claim/challenge logic (BitVM3)
+### Phase 1: Demo (✅ Complete)
+- ✅ Smart contracts
+- ✅ Comprehensive tests
+- ✅ Interactive scripts
+- ✅ Documentation
 
-## License
+### Phase 2: Frontend (🚧 In Progress)
+- 🚧 React + TypeScript setup
+- ⏳ Wallet integration
+- ⏳ Contract interaction
+- ⏳ UI components
+- ⏳ Dashboard
+
+### Phase 3: Production
+- ⏳ Real Aave integration
+- ⏳ Chainlink oracle
+- ⏳ DEX integration
+- ⏳ Security audit
+- ⏳ Testnet deployment
+
+### Phase 4: Bitcoin Integration
+- ⏳ BitVM3 vault integration
+- ⏳ Bitcoin bridge
+- ⏳ Mainnet deployment
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
 MIT
+
+## 🔗 Links
+
+- Documentation: See `/vault-contracts` and `/frontend` READMEs
+- Tests: `cd vault-contracts && npm test`
+- Scripts: `cd vault-contracts && npm run simulate`
+
+---
+
+**Status**: ✅ Contracts Complete | 🚧 Frontend In Progress | 🚀 Ready for Enhancement

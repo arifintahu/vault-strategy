@@ -1,23 +1,52 @@
 {
-  "name": "vault-strategy",
+  "name": "vault-strategy-monorepo",
   "version": "0.1.0",
   "private": true,
+  "description": "Vault Strategy - Automated EMA-based leverage management for Bitcoin",
+  "workspaces": [
+    "vault-contracts",
+    "frontend"
+  ],
   "scripts": {
-    "build": "hardhat compile",
-    "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.ts",
-    "simulate": "hardhat run scripts/simulate.ts",
-    "query": "hardhat run scripts/query-state.ts",
-    "oracle:update": "hardhat run scripts/update-oracle.ts",
-    "aave:supply": "hardhat run scripts/supply-aave.ts"
+    "contracts:install": "npm install --workspace=vault-contracts",
+    "contracts:build": "npm run build --workspace=vault-contracts",
+    "contracts:test": "npm test --workspace=vault-contracts",
+    "contracts:deploy": "npm run deploy:local --workspace=vault-contracts",
+    "contracts:simulate": "npm run simulate --workspace=vault-contracts",
+    "contracts:query": "npm run query --workspace=vault-contracts",
+    "frontend:install": "npm install --workspace=frontend",
+    "frontend:dev": "npm run dev --workspace=frontend",
+    "frontend:build": "npm run build --workspace=frontend",
+    "frontend:preview": "npm run preview --workspace=frontend",
+    "install:all": "npm run contracts:install && npm run frontend:install",
+    "build:all": "npm run contracts:build && npm run frontend:build",
+    "test:all": "npm run contracts:test",
+    "dev": "concurrently \"npm run contracts:deploy\" \"npm run frontend:dev\"",
+    "clean": "npm run clean --workspaces --if-present"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@types/chai": "^4.3.11",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "^20.10.6",
-    "hardhat": "^2.22.15",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
-  }
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/vault-strategy"
+  },
+  "keywords": [
+    "defi",
+    "bitcoin",
+    "leverage",
+    "ema",
+    "aave",
+    "ethereum",
+    "solidity",
+    "hardhat",
+    "react",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }

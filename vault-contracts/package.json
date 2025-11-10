@@ -1,0 +1,23 @@
+{
+  "name": "vault-strategy",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts",
+    "simulate": "hardhat run scripts/simulate.ts",
+    "query": "hardhat run scripts/query-state.ts",
+    "oracle:update": "hardhat run scripts/update-oracle.ts",
+    "aave:supply": "hardhat run scripts/supply-aave.ts"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.10.6",
+    "hardhat": "^2.22.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
