@@ -162,7 +162,7 @@ describe("Vault Strategy with EMA and Aave", function () {
       expect(state._suppliedToAave).to.equal(0n); // Not yet supplied
     });
 
-    it("should supply vault balance to Aave", async function () {
+    it("should supply vault balance to Aave and deduct from vaultBalance", async function () {
       const amount = toInt(5);
       
       await vbtc.connect(user1).approve(await strategy.getAddress(), amount);
@@ -172,6 +172,7 @@ describe("Vault Strategy with EMA and Aave", function () {
       await strategy.supplyToAave(amount);
       
       const state = await strategy.getVaultState();
+      expect(state._vaultBalance).to.equal(0n); // Deducted from vault balance
       expect(state._suppliedToAave).to.equal(amount);
       expect(state._btcPosition).to.equal(amount);
     });
@@ -183,13 +184,13 @@ describe("Vault Strategy with EMA and Aave", function () {
       await strategy.connect(user1).deposit(amount);
       await strategy.supplyToAave(amount);
       
-      // Try to withdraw (should fail)
+      // Try to withdraw (should fail - no vault balance left)
       await expect(
         strategy.connect(user1).withdraw(amount)
-      ).to.be.revertedWith("INSUFFICIENT_FREE");
+      ).to.be.revertedWith("INSUFFICIENT_VAULT_BALANCE");
     });
 
-    it("should allow withdraw of free balance", async function () {
+    it("should allow withdraw of vault balance only", async function () {
       const depositAmount = toInt(5);
       const supplyAmount = toInt(3);
       
@@ -197,12 +198,45 @@ describe("Vault Strategy with EMA and Aave", function () {
       await strategy.connect(user1).deposit(depositAmount);
       await strategy.supplyToAave(supplyAmount);
       
-      // Withdraw free balance (2 vBTC)
-      const freeBalance = depositAmount - supplyAmount;
-      await strategy.connect(user1).withdraw(freeBalance);
+      // Withdraw vault balance (2 vBTC remaining)
+      const vaultBalance = depositAmount - supplyAmount;
+      await strategy.connect(user1).withdraw(vaultBalance);
       
       const state = await strategy.getVaultState();
-      expect(state._vaultBalance).to.equal(supplyAmount);
+      expect(state._vaultBalance).to.equal(0n);
+      expect(state._suppliedToAave).to.equal(supplyAmount);
+    });
+
+    it("should withdraw from Aave back to vault balance", async function () {
+      const amount = toInt(5);
+      
+      await vbtc.connect(user1).approve(await strategy.getAddress(), amount);
+      await strategy.connect(user1).deposit(amount);
+      await strategy.supplyToAave(amount);
+      
+      // Withdraw from Aave
+      await strategy.connect(user1).withdrawFromAave(toInt(2));
+      
+      const state = await strategy.getVaultState();
+      expect(state._vaultBalance).to.equal(toInt(2));
+      expect(state._suppliedToAave).to.equal(toInt(3));
+      expect(state._btcPosition).to.equal(toInt(3));
+    });
+
+    it("should not allow withdraw from Aave with debt", async function () {
+      const amount = toInt(5);
+      
+      await vbtc.connect(user1).approve(await strategy.getAddress(), amount);
+      await strategy.connect(user1).deposit(amount);
+      await strategy.supplyToAave(amount);
+      
+      // Create debt by rebalancing
+      await strategy.rebalance();
+      
+      // Try to withdraw from Aave (should fail)
+      await expect(
+        strategy.connect(user1).withdrawFromAave(toInt(1))
+      ).to.be.revertedWith("MUST_REPAY_DEBT_FIRST");
     });
   });
 
@@ -293,6 +327,88 @@ describe("Vault Strategy with EMA and Aave", function () {
       
       const state = await strategy.getVaultState();
       expect(state._targetLeverageBps).to.be.gte(10000n);
+    });
+  });
+
+  describe("LeverageStrategy - Repay Debt", function () {
+    let strategy: LeverageStrategy;
+
+    beforeEach(async function () {
+      // Create vault for user1
+      const tx = await factory.connect(user1).createVault(1); // Medium risk
+      const receipt = await tx.wait();
+      const event = receipt?.logs.find((log: any) => {
+        try {
+          return factory.interface.parseLog(log)?.name === "VaultCreated";
+        } catch {
+          return false;
+        }
+      });
+      const parsedEvent = factory.interface.parseLog(event as any);
+      const vaultAddress = parsedEvent?.args[1];
+      
+      strategy = await ethers.getContractAt("LeverageStrategy", vaultAddress);
+      
+      // Deposit, supply, and create debt
+      const amount = toInt(5);
+      await vbtc.connect(user1).approve(await strategy.getAddress(), amount);
+      await strategy.connect(user1).deposit(amount);
+      await strategy.supplyToAave(amount);
+      await strategy.rebalance(); // Creates debt
+    });
+
+    it("should repay debt using vault balance", async function () {
+      // Add some vault balance
+      const additionalAmount = toInt(2);
+      await vbtc.connect(user1).approve(await strategy.getAddress(), additionalAmount);
+      await strategy.connect(user1).deposit(additionalAmount);
+      
+      const stateBefore = await strategy.getVaultState();
+      const debtBefore = stateBefore._borrowedFromAave;
+      
+      // Repay using 1 vBTC from vault balance
+      await strategy.connect(user1).repayDebt(toInt(1));
+      
+      const stateAfter = await strategy.getVaultState();
+      expect(stateAfter._borrowedFromAave).to.be.lt(debtBefore);
+      expect(stateAfter._vaultBalance).to.equal(toInt(1)); // 2 - 1
+    });
+
+    it("should repay debt using supplied balance if vault balance insufficient", async function () {
+      const stateBefore = await strategy.getVaultState();
+      const debtBefore = stateBefore._borrowedFromAave;
+      const suppliedBefore = stateBefore._suppliedToAave;
+      
+      // Repay using 1 vBTC (will use from supplied since vault balance is 0)
+      await strategy.connect(user1).repayDebt(toInt(1));
+      
+      const stateAfter = await strategy.getVaultState();
+      expect(stateAfter._borrowedFromAave).to.be.lt(debtBefore);
+      expect(stateAfter._suppliedToAave).to.be.lt(suppliedBefore);
+      expect(stateAfter._vaultBalance).to.equal(0n);
+    });
+
+    it("should not allow repay when no debt", async function () {
+      // First repay all debt
+      const state = await strategy.getVaultState();
+      const btcNeeded = (state._borrowedFromAave * toInt(1)) / toInt(60000) + toInt(1);
+      
+      await strategy.connect(user1).repayDebt(btcNeeded);
+      
+      // Try to repay again (should fail)
+      await expect(
+        strategy.connect(user1).repayDebt(toInt(1))
+      ).to.be.revertedWith("NO_DEBT");
+    });
+
+    it("should not allow repay with insufficient BTC", async function () {
+      const state = await strategy.getVaultState();
+      const totalBtc = state._vaultBalance + state._suppliedToAave;
+      
+      // Try to repay with more BTC than available
+      await expect(
+        strategy.connect(user1).repayDebt(totalBtc + toInt(1))
+      ).to.be.revertedWith("INSUFFICIENT_BTC");
     });
   });
 

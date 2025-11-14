@@ -14,10 +14,11 @@ interface IOracleEMA {
 /**
  * @title LeverageStrategy (demo)
  * @notice Per-user isolated vault with automated leverage management
- *         - User deposits stay as vault balance (not immediately used as collateral)
- *         - System lends vault balance to Aave to earn yield
+ *         - User deposits stay as vault balance (idle, earning no yield)
+ *         - User can supply vault balance to Aave to earn yield (moves from vaultBalance to suppliedToAave)
  *         - On bullish EMA signals: borrows stablecoin, buys BTC, increases position
  *         - On bearish signals: sells BTC, repays debt, deleverages
+ *         - User can only withdraw from vaultBalance (must withdraw from Aave first if needed)
  *         - Tracks average BTC purchase price for portfolio management
  */
 contract LeverageStrategy {
@@ -35,9 +36,9 @@ contract LeverageStrategy {
 
     mapping(Risk => Config) public riskCfg;
 
-    // Vault accounting (separated from collateral)
-    uint256 public vaultBalance;        // User's total balance in vault (not yet collateral)
-    uint256 public suppliedToAave;      // Amount supplied to Aave as collateral
+    // Vault accounting
+    uint256 public vaultBalance;        // Idle balance in vault (not earning yield, can be withdrawn)
+    uint256 public suppliedToAave;      // Amount supplied to Aave as collateral (earning yield)
     uint256 public borrowedFromAave;    // Stablecoin debt from Aave (8 decimals)
     uint256 public btcPosition;         // Total BTC position (supplied + purchased with borrowed funds)
     
@@ -95,12 +96,11 @@ contract LeverageStrategy {
     }
 
     /**
-     * @notice Withdraw vBTC from vault (must have sufficient free balance)
+     * @notice Withdraw vBTC from vault (only from free vault balance, not from Aave)
      */
     function withdraw(uint256 amount) external onlyOwner {
         require(amount > 0, "ZERO");
-        uint256 freeBalance = vaultBalance - suppliedToAave;
-        require(freeBalance >= amount, "INSUFFICIENT_FREE");
+        require(vaultBalance >= amount, "INSUFFICIENT_VAULT_BALANCE");
         
         vaultBalance -= amount;
         require(vaultBTC.transfer(msg.sender, amount), "XFER_FAIL");
@@ -108,17 +108,85 @@ contract LeverageStrategy {
     }
 
     /**
+     * @notice Withdraw from Aave back to vault balance
+     */
+    function withdrawFromAave(uint256 amount) external onlyOwner {
+        require(amount > 0, "ZERO");
+        require(suppliedToAave >= amount, "INSUFFICIENT_SUPPLIED");
+        require(borrowedFromAave == 0, "MUST_REPAY_DEBT_FIRST");
+        
+        // Withdraw from Aave
+        aave.withdraw(amount);
+        
+        // Update accounting: move from supplied back to vault balance
+        suppliedToAave -= amount;
+        btcPosition -= amount;
+        vaultBalance += amount;
+    }
+
+    /**
+     * @notice Repay debt by selling BTC (uses vaultBalance first, then suppliedToAave if needed)
+     * @param btcAmount Amount of BTC to sell to repay debt
+     */
+    function repayDebt(uint256 btcAmount) external onlyOwner {
+        require(btcAmount > 0, "ZERO");
+        require(borrowedFromAave > 0, "NO_DEBT");
+        
+        (int256 price, , , ) = oracle.get();
+        require(price > 0, "INVALID_PRICE");
+        
+        uint256 btcPrice = uint256(price);
+        uint256 totalAvailable = vaultBalance + suppliedToAave;
+        require(totalAvailable >= btcAmount, "INSUFFICIENT_BTC");
+        
+        // Calculate USD received from selling BTC
+        uint256 usdReceived = (btcAmount * btcPrice) / 1e8;
+        
+        // Cap repayment to actual debt
+        uint256 repayAmount = usdReceived > borrowedFromAave ? borrowedFromAave : usdReceived;
+        
+        // Use the requested btcAmount (user decides how much BTC to sell)
+        // Use vaultBalance first
+        uint256 fromVault = btcAmount > vaultBalance ? vaultBalance : btcAmount;
+        uint256 fromSupplied = btcAmount - fromVault;
+        
+        // Deduct from vault balance
+        if (fromVault > 0) {
+            vaultBalance -= fromVault;
+            btcPosition -= fromVault;
+        }
+        
+        // Simulate selling BTC for stablecoin and repay debt first
+        // In real implementation, this would involve DEX interaction
+        // For demo, we mint stablecoin to simulate the sale
+        aave.mintStablecoin(address(this), repayAmount);
+        aave.repay(repayAmount);
+        borrowedFromAave -= repayAmount;
+        
+        // Now safe to withdraw from Aave if needed (after debt reduction)
+        if (fromSupplied > 0) {
+            require(suppliedToAave >= fromSupplied, "INSUFFICIENT_SUPPLIED");
+            aave.withdraw(fromSupplied);
+            suppliedToAave -= fromSupplied;
+            btcPosition -= fromSupplied;
+        }
+        
+        emit SellAndRepay(btcAmount, repayAmount, btcPrice);
+    }
+
+    /**
      * @notice Supply vault balance to Aave to earn yield
      */
     function supplyToAave(uint256 amount) public {
         require(amount > 0, "ZERO");
-        uint256 freeBalance = vaultBalance - suppliedToAave;
-        require(freeBalance >= amount, "INSUFFICIENT_FREE");
+        require(vaultBalance >= amount, "INSUFFICIENT_VAULT_BALANCE");
         
         // Approve and supply to Aave
         vaultBTC.approve(address(aave), amount);
         aave.supply(amount);
         
+        // Update accounting: move from vault balance to supplied
+        vaultBalance -= amount;
         suppliedToAave += amount;
         btcPosition += amount;
         emit SupplyToAave(amount);
