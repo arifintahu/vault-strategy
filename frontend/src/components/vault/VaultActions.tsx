@@ -13,6 +13,7 @@ interface VaultActionsProps {
 export const VaultActions = ({ vault, onActionComplete }: VaultActionsProps) => {
   const { account } = useWallet();
   const signer = useSigner();
+  const [activeTab, setActiveTab] = useState<'deposit' | 'supply' | 'withdraw' | 'rebalance'>('deposit');
   const [amount, setAmount] = useState('');
   const [vbtcBalance, setVbtcBalance] = useState<bigint>(0n);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,8 +41,36 @@ export const VaultActions = ({ vault, onActionComplete }: VaultActionsProps) => 
     return () => clearInterval(interval);
   }, [account]);
 
+  // Get max amount based on active tab
+  const getMaxAmount = () => {
+    switch (activeTab) {
+      case 'deposit':
+        return vbtcBalance; // User's vBTC balance
+      case 'supply':
+        return vault.state.vaultBalance; // Vault balance
+      case 'withdraw':
+        return vault.state.vaultBalance; // Vault balance
+      default:
+        return 0n;
+    }
+  };
+
+  // Get available balance label
+  const getBalanceLabel = () => {
+    switch (activeTab) {
+      case 'deposit':
+        return `Available: ${formatBTC(vbtcBalance)} vBTC`;
+      case 'supply':
+        return `Vault Balance: ${formatBTC(vault.state.vaultBalance)} vBTC`;
+      case 'withdraw':
+        return `Vault Balance: ${formatBTC(vault.state.vaultBalance)} vBTC`;
+      default:
+        return '';
+    }
+  };
+
   const setMaxAmount = () => {
-    setAmount(formatBTC(vbtcBalance));
+    setAmount(formatBTC(getMaxAmount()));
   };
 
   const handleDeposit = async () => {
@@ -167,62 +196,102 @@ export const VaultActions = ({ vault, onActionComplete }: VaultActionsProps) => 
         <h3>Vault Actions</h3>
       </div>
       <div className="card-body">
-        <div className="form-group">
-          <label>
-            Amount (vBTC)
-            <span className="balance-label">
-              Available: {formatBTC(vbtcBalance)} vBTC
-            </span>
-          </label>
-          <div className="input-with-button">
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.0"
-              step="0.0001"
-              min="0"
-              className="input"
-            />
-            <button
-              onClick={setMaxAmount}
-              className="btn btn-sm btn-secondary max-button"
-              type="button"
-            >
-              Max
-            </button>
-          </div>
-        </div>
-
-        <div className="action-buttons">
+        {/* Action Tabs */}
+        <div className="action-tabs">
           <button
-            onClick={handleDeposit}
-            disabled={isProcessing || !amount}
-            className="btn btn-primary"
+            className={`tab-button ${activeTab === 'deposit' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('deposit'); setAmount(''); setError(null); }}
           >
             Deposit
           </button>
           <button
-            onClick={handleSupplyToAave}
-            disabled={isProcessing || !amount}
-            className="btn btn-primary"
+            className={`tab-button ${activeTab === 'supply' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('supply'); setAmount(''); setError(null); }}
           >
             Supply to Aave
           </button>
           <button
-            onClick={handleWithdraw}
-            disabled={isProcessing || !amount}
-            className="btn btn-secondary"
+            className={`tab-button ${activeTab === 'withdraw' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('withdraw'); setAmount(''); setError(null); }}
           >
             Withdraw
           </button>
           <button
-            onClick={handleRebalance}
-            disabled={isProcessing}
-            className="btn btn-accent"
+            className={`tab-button ${activeTab === 'rebalance' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('rebalance'); setAmount(''); setError(null); }}
           >
             Rebalance
           </button>
+        </div>
+
+        {/* Amount Input (not shown for rebalance) */}
+        {activeTab !== 'rebalance' && (
+          <div className="form-group">
+            <label>
+              Amount (vBTC)
+              <span className="balance-label">
+                {getBalanceLabel()}
+              </span>
+            </label>
+            <div className="input-with-button">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.0"
+                step="0.0001"
+                min="0"
+                className="input"
+              />
+              <button
+                onClick={setMaxAmount}
+                className="btn btn-sm btn-secondary max-button"
+                type="button"
+              >
+                Max
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="action-button-container">
+          {activeTab === 'deposit' && (
+            <button
+              onClick={handleDeposit}
+              disabled={isProcessing || !amount}
+              className="btn btn-primary btn-block"
+            >
+              {isProcessing ? 'Processing...' : 'Deposit to Vault'}
+            </button>
+          )}
+          {activeTab === 'supply' && (
+            <button
+              onClick={handleSupplyToAave}
+              disabled={isProcessing || !amount}
+              className="btn btn-primary btn-block"
+            >
+              {isProcessing ? 'Processing...' : 'Supply to Aave'}
+            </button>
+          )}
+          {activeTab === 'withdraw' && (
+            <button
+              onClick={handleWithdraw}
+              disabled={isProcessing || !amount}
+              className="btn btn-secondary btn-block"
+            >
+              {isProcessing ? 'Processing...' : 'Withdraw from Vault'}
+            </button>
+          )}
+          {activeTab === 'rebalance' && (
+            <button
+              onClick={handleRebalance}
+              disabled={isProcessing}
+              className="btn btn-accent btn-block"
+            >
+              {isProcessing ? 'Processing...' : 'Rebalance Vault'}
+            </button>
+          )}
         </div>
 
         {error && <div className="error mt-2">{error}</div>}
