@@ -18,33 +18,34 @@ export const OracleStatus = () => {
   return (
     <div className="oracle-status card">
       <div className="card-header">
-        <h2>Oracle Status</h2>
-        <button onClick={refresh} className="btn btn-sm">
-          Refresh
+        <h2>📊 Market Analytics</h2>
+        <button onClick={refresh} className="btn btn-sm btn-secondary">
+          🔄 Refresh
         </button>
       </div>
       <div className="card-body">
         <div className="oracle-grid">
           <div className="oracle-item">
-            <label>Current Price</label>
+            <label>BTC Price</label>
             <div className="value price">${formatUSD(oracleData.price)}</div>
           </div>
           <div className="oracle-item">
-            <label>EMA 20-day</label>
+            <label>EMA-20</label>
             <div className="value">${formatUSD(oracleData.ema20)}</div>
           </div>
           <div className="oracle-item">
-            <label>EMA 50-day</label>
+            <label>EMA-50</label>
             <div className="value">${formatUSD(oracleData.ema50)}</div>
           </div>
           <div className="oracle-item">
-            <label>EMA 200-day</label>
+            <label>EMA-200</label>
             <div className="value">${formatUSD(oracleData.ema200)}</div>
           </div>
         </div>
         <div className={`signal-indicator ${getSignalColor(oracleData.signal)}`}>
           <label>Market Signal</label>
           <div className="signal-value">
+            {oracleData.signal >= 1 ? '📈 ' : oracleData.signal <= -1 ? '📉 ' : '➡️ '}
             {SIGNAL_NAMES[oracleData.signal]}
           </div>
         </div>

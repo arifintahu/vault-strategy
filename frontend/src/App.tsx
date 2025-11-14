@@ -27,32 +27,31 @@ function App() {
     <Layout>
       <div className="dashboard">
         <div className="dashboard-header">
-          <h1>Dashboard</h1>
-          {account && <p className="subtitle">Manage your leverage strategy vaults</p>}
+          <h1>🚀 Vault Strategy</h1>
+          {account && <p className="subtitle">Automated leverage management powered by EMA signals</p>}
         </div>
 
         <div className="dashboard-grid">
-          {/* Oracle Status */}
-          <div className="grid-item full-width">
+          {/* Left Column: Oracle & Create Vault */}
+          <div className="grid-item col-6">
             <OracleStatus />
           </div>
 
-          {/* Create Vault */}
           {account && (
-            <div className="grid-item">
+            <div className="grid-item col-6">
               <CreateVault onVaultCreated={handleVaultCreated} />
             </div>
           )}
 
-          {/* Vault Actions */}
+          {/* Vault Actions - Full Width when selected */}
           {selectedVault && (
             <div className="grid-item">
               <VaultActions vault={selectedVault} onActionComplete={handleActionComplete} />
             </div>
           )}
 
-          {/* Vault List */}
-          <div className="grid-item full-width">
+          {/* Vault List - Full Width */}
+          <div className="grid-item">
             <VaultList 
               account={account} 
               vaults={vaults}

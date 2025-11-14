@@ -193,7 +193,8 @@ export const VaultActions = ({ vault, onActionComplete }: VaultActionsProps) => 
   return (
     <div className="vault-actions card">
       <div className="card-header">
-        <h3>Vault Actions</h3>
+        <h3>⚡ Manage Vault</h3>
+        <button onClick={onActionComplete} className="btn btn-sm">✕ Close</button>
       </div>
       <div className="card-body">
         {/* Action Tabs */}
@@ -202,25 +203,25 @@ export const VaultActions = ({ vault, onActionComplete }: VaultActionsProps) => 
             className={`tab-button ${activeTab === 'deposit' ? 'active' : ''}`}
             onClick={() => { setActiveTab('deposit'); setAmount(''); setError(null); }}
           >
-            Deposit
+            💰 Deposit
           </button>
           <button
             className={`tab-button ${activeTab === 'supply' ? 'active' : ''}`}
             onClick={() => { setActiveTab('supply'); setAmount(''); setError(null); }}
           >
-            Supply to Aave
+            🏛️ Supply
           </button>
           <button
             className={`tab-button ${activeTab === 'withdraw' ? 'active' : ''}`}
             onClick={() => { setActiveTab('withdraw'); setAmount(''); setError(null); }}
           >
-            Withdraw
+            💸 Withdraw
           </button>
           <button
             className={`tab-button ${activeTab === 'rebalance' ? 'active' : ''}`}
             onClick={() => { setActiveTab('rebalance'); setAmount(''); setError(null); }}
           >
-            Rebalance
+            🔄 Rebalance
           </button>
         </div>
 

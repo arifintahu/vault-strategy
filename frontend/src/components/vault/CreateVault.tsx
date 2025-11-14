@@ -50,18 +50,39 @@ export const CreateVault = ({ onVaultCreated }: CreateVaultProps) => {
         <div className="form-group">
           <label>Select Risk Tier</label>
           <div className="risk-options">
-            {Object.entries(RISK_TIER_NAMES).map(([key, name]) => (
-              <label key={key} className="radio-option">
-                <input
-                  type="radio"
-                  name="risk"
-                  value={key}
-                  checked={selectedRisk === Number(key)}
-                  onChange={(e) => setSelectedRisk(Number(e.target.value) as RiskTierType)}
-                />
-                <span>{name}</span>
-              </label>
-            ))}
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="risk"
+                value={RiskTier.Low}
+                checked={selectedRisk === RiskTier.Low}
+                onChange={(e) => setSelectedRisk(Number(e.target.value) as RiskTierType)}
+              />
+              <label>🛡️ Low Risk</label>
+              <div className="risk-details">Max 1.1x leverage</div>
+            </label>
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="risk"
+                value={RiskTier.Medium}
+                checked={selectedRisk === RiskTier.Medium}
+                onChange={(e) => setSelectedRisk(Number(e.target.value) as RiskTierType)}
+              />
+              <label>⚖️ Medium Risk</label>
+              <div className="risk-details">Max 1.3x leverage</div>
+            </label>
+            <label className="radio-option">
+              <input
+                type="radio"
+                name="risk"
+                value={RiskTier.High}
+                checked={selectedRisk === RiskTier.High}
+                onChange={(e) => setSelectedRisk(Number(e.target.value) as RiskTierType)}
+              />
+              <label>🔥 High Risk</label>
+              <div className="risk-details">Max 1.5x leverage</div>
+            </label>
           </div>
         </div>
 

@@ -35,12 +35,17 @@ export const VaultList = ({ account, vaults, loading, error, onSelectVault }: Va
   }
 
   return (
-    <div className="vault-list">
-      <h2>Your Vaults ({vaults.length})</h2>
-      <div className="vault-grid">
-        {vaults.map((vault) => (
-          <VaultCard key={vault.address} vault={vault} onSelect={onSelectVault} />
-        ))}
+    <div className="vault-list card">
+      <div className="card-header">
+        <h2>🏦 Your Vaults</h2>
+        <span className="vault-count">{vaults.length} Active</span>
+      </div>
+      <div className="card-body">
+        <div className="vault-grid">
+          {vaults.map((vault) => (
+            <VaultCard key={vault.address} vault={vault} onSelect={onSelectVault} />
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -14,7 +14,10 @@ export const Layout = ({ children }: LayoutProps) => {
       </main>
       <footer className="footer">
         <div className="container">
-          <p>Vault Strategy - Demo Implementation</p>
+          <p>🚀 Vault Strategy - Automated Leverage Management</p>
+          <p style={{ fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.7 }}>
+            Demo Implementation • Powered by EMA Signals & Aave
+          </p>
         </div>
       </footer>
     </div>

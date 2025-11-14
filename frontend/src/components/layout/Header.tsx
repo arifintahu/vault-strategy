@@ -6,8 +6,8 @@ export const Header = () => {
       <div className="container">
         <div className="header-content">
           <div className="logo">
-            <h1>Vault Strategy</h1>
-            <span className="tagline">Automated BTC Leverage Management</span>
+            <h1>🚀 Vault Strategy</h1>
+            <span className="tagline">Automated BTC Leverage • EMA Signals • Aave Protocol</span>
           </div>
           <ConnectWallet />
         </div>
