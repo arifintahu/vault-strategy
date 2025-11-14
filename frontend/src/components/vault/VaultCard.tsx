@@ -21,16 +21,24 @@ export const VaultCard = ({ vault, onSelect }: VaultCardProps) => {
       <div className="card-body">
         <div className="vault-stats">
           <div className="stat">
-            <label>Vault Balance</label>
+            <label>Vault Balance (Idle)</label>
             <div className="value">{formatBTC(state.vaultBalance)} vBTC</div>
+            <small className="hint">Immediately withdrawable</small>
           </div>
           <div className="stat">
             <label>Supplied to Aave</label>
             <div className="value">{formatBTC(state.suppliedToAave)} vBTC</div>
+            <small className="hint">Earning yield, used as collateral</small>
           </div>
           <div className="stat">
-            <label>BTC Position</label>
+            <label>BTC Position (in Aave)</label>
             <div className="value">{formatBTC(state.btcPosition)} vBTC</div>
+            <small className="hint">Supplied + borrowed exposure</small>
+          </div>
+          <div className="stat highlight">
+            <label>Total BTC Owned</label>
+            <div className="value">{formatBTC(state.vaultBalance + state.btcPosition)} vBTC</div>
+            <small className="hint">Vault + Position (with leverage)</small>
           </div>
           <div className="stat">
             <label>Borrowed</label>

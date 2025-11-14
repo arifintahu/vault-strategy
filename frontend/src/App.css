@@ -467,6 +467,30 @@ body {
   font-size: 1.25rem;
 }
 
+.stat .hint {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.stat.highlight {
+  background-color: #eff6ff;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #bfdbfe;
+}
+
+.stat.highlight label {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.stat.highlight .value {
+  color: #1e3a8a;
+}
+
 /* Vault List */
 .vault-list h2 {
   margin-bottom: 1rem;
