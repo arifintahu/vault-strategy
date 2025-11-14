@@ -1191,52 +1191,41 @@ body {
   }
 }
 
-/* Apply animations */
+/* Apply animations only on initial load */
 .card {
   animation: fadeIn 0.4s ease-out;
+  animation-fill-mode: both;
 }
 
 .vault-card {
   animation: scaleIn 0.3s ease-out;
 }
 
-.oracle-item {
-  animation: fadeIn 0.5s ease-out;
-  animation-fill-mode: both;
+/* Oracle items - smooth transitions instead of animations */
+.oracle-item .value {
+  transition: all 0.3s ease-out;
 }
 
-.oracle-item:nth-child(1) { animation-delay: 0.1s; }
-.oracle-item:nth-child(2) { animation-delay: 0.2s; }
-.oracle-item:nth-child(3) { animation-delay: 0.3s; }
-.oracle-item:nth-child(4) { animation-delay: 0.4s; }
-
-.stat {
-  animation: fadeIn 0.4s ease-out;
-  animation-fill-mode: both;
+.oracle-item .value.price {
+  transition: all 0.3s ease-out;
 }
 
-.stat:nth-child(1) { animation-delay: 0.05s; }
-.stat:nth-child(2) { animation-delay: 0.1s; }
-.stat:nth-child(3) { animation-delay: 0.15s; }
-.stat:nth-child(4) { animation-delay: 0.2s; }
-.stat:nth-child(5) { animation-delay: 0.25s; }
-.stat:nth-child(6) { animation-delay: 0.3s; }
-.stat:nth-child(7) { animation-delay: 0.35s; }
-
-/* Number animation */
-@keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Stats - smooth transitions for value changes */
+.stat .value {
+  transition: all 0.3s ease-out;
 }
 
-.value {
-  animation: countUp 0.5s ease-out;
+.stat .value.leverage {
+  transition: all 0.3s ease-out;
+}
+
+/* Signal indicator - smooth transitions */
+.signal-indicator {
+  transition: background 0.5s ease-out, border-color 0.5s ease-out, box-shadow 0.5s ease-out;
+}
+
+.signal-value {
+  transition: color 0.3s ease-out;
 }
 
 /* Glow effects on hover */

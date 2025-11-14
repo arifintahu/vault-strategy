@@ -16,7 +16,7 @@ export const OracleStatus = () => {
   };
 
   return (
-    <div className="oracle-status card">
+    <div className="oracle-status card" style={{ animation: 'none' }}>
       <div className="card-header">
         <h2>📊 Market Analytics</h2>
         <button onClick={refresh} className="btn btn-sm btn-secondary">
@@ -25,21 +25,29 @@ export const OracleStatus = () => {
       </div>
       <div className="card-body">
         <div className="oracle-grid">
-          <div className="oracle-item">
+          <div className="oracle-item" style={{ animation: 'none' }}>
             <label>BTC Price</label>
-            <div className="value price">${formatUSD(oracleData.price)}</div>
+            <div className="value price" key={oracleData.price.toString()}>
+              ${formatUSD(oracleData.price)}
+            </div>
           </div>
-          <div className="oracle-item">
+          <div className="oracle-item" style={{ animation: 'none' }}>
             <label>EMA-20</label>
-            <div className="value">${formatUSD(oracleData.ema20)}</div>
+            <div className="value" key={oracleData.ema20.toString()}>
+              ${formatUSD(oracleData.ema20)}
+            </div>
           </div>
-          <div className="oracle-item">
+          <div className="oracle-item" style={{ animation: 'none' }}>
             <label>EMA-50</label>
-            <div className="value">${formatUSD(oracleData.ema50)}</div>
+            <div className="value" key={oracleData.ema50.toString()}>
+              ${formatUSD(oracleData.ema50)}
+            </div>
           </div>
-          <div className="oracle-item">
+          <div className="oracle-item" style={{ animation: 'none' }}>
             <label>EMA-200</label>
-            <div className="value">${formatUSD(oracleData.ema200)}</div>
+            <div className="value" key={oracleData.ema200.toString()}>
+              ${formatUSD(oracleData.ema200)}
+            </div>
           </div>
         </div>
         <div className={`signal-indicator ${getSignalColor(oracleData.signal)}`}>
