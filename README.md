@@ -1,236 +1,240 @@
 # 🚀 Vault Strategy
 
-**Automated, EMA-based leverage management for Bitcoin holders with self-custody guarantees.**
+## 🌟 Project Vision
 
-A DeFi protocol that provides rule-based leverage management using 20/50/200-day EMA signals, allowing BTC holders to enhance returns while maintaining self-custody and reducing drawdown risk.
+Vault Strategy transforms Bitcoin holding into an active, automated strategy. Our goal is to provide delta exposure with smoother drawdowns and automated profit-taking, while maintaining self-custody guarantees.
 
-## 📋 Table of Contents
+## 🎯 The Problem We Solve
 
-- [Problem Statement](#-problem-statement)
-- [Solution](#-solution)
-- [How It Works](#-how-it-works)
-- [Quick Start](#-quick-start)
-- [Architecture](#-architecture)
-- [Contract Flow](#-contract-flow)
+**Bitcoin holders want better returns but face challenges:**
 
-## 🎯 Problem Statement
+- ❌ Manual leverage management is time-consuming and emotional
+- ❌ Centralized platforms require giving up custody
+- ❌ Wrapped BTC solutions introduce counterparty risk
+- ❌ No automated, rule-based leverage systems exist
 
-Bitcoin holders face a dilemma:
+**Vault Strategy makes it simple:**
 
-- **Want**: Delta exposure with smoother drawdowns and automated profit-taking
-- **Don't Want**: To give up self-custody or rely on centralized platforms
-- **Current Solutions**: Manual leverage tools, centralized exchanges, or wrapped BTC with custody risk
+- ✅ **Automated Leverage**: EMA signals (20/50/200-day) adjust leverage automatically
+- ✅ **Self-Custody**: Designed for Bitcoin trustless vaults (BitVM3)
+- ✅ **Risk Tiers**: Choose Low (1.1x), Medium (1.3x), or High (1.5x) max leverage
+- ✅ **Isolated Vaults**: Each user owns their own strategy contract
+- ✅ **Transparent Rules**: Open-source, auditable, EMA-based decisions
 
-**The Gap**: No automated, rule-based leverage system that works with self-custodied Bitcoin.
+## 🏗️ System Design
 
-## 💡 Solution
-
-Vault Strategy provides:
-
-1. **Automated Leverage Management**: Uses EMA signals (20/50/200-day) to automatically adjust leverage
-2. **Self-Custody Compatible**: Designed to work with Bitcoin trustless vaults (BitVM3)
-3. **Risk-Tiered Approach**: Choose Low (1.1x), Medium (1.3x), or High (1.5x) max leverage
-4. **Isolated Vaults**: Each user gets their own strategy contract via factory pattern
-5. **Transparent Rules**: Open-source, auditable, EMA-based decision making
-
-## 🔄 How It Works
-
-### User Journey
-
-```
-1. Create Vault → 2. Deposit vBTC → 3. Supply to Aave → 4. Auto-Rebalance → 5. Withdraw
+```mermaid
+graph TD
+    A[👤 User] -->|Create Vault| B[🏭 StrategyFactory]
+    B --> C[🏦 LeverageStrategy Vault]
+    C --> D[💰 Deposit vBTC]
+    D --> E[🏛️ Supply to Aave]
+    E --> F[📊 Earn Yield]
+    G[📈 OracleEMA] -->|Bullish Signal| H[⚡ Auto-Rebalance]
+    G -->|Bearish Signal| H
+    H --> C
+    C --> I[💸 Withdraw Anytime]
 ```
 
-### Leverage Mechanism
+### Key Components:
 
-**Bullish Signal** (Price > EMAs):
-```
-Supply BTC → Borrow Stablecoin → Buy More BTC → Increase Leverage
+- **🏭 Factory Pattern**: Each user deploys their own isolated vault
+- **📈 EMA Oracle**: 20/50/200-day EMAs for trend detection
+- **🏛️ Aave Integration**: Supply BTC to earn yield, borrow for leverage
+- **⚡ Auto-Rebalancing**: Increases leverage on bullish signals, decreases on bearish
+- **💰 Manual Controls**: repayDebt() and withdrawFromAave() for user control
+
+## ⚡ Quick Start
+
+### 🚀 One-Command Setup
+
+```bash
+# Clone and install everything
+git clone https://github.com/yourusername/vault-strategy.git
+cd vault-strategy
+npm run install:all
 ```
 
-**Bearish Signal** (Price < EMAs):
+### 🏃‍♂️ Run the Application
+
+```bash
+# Start everything (frontend + contracts)
+npm run dev
 ```
-Sell BTC → Repay Debt → Decrease Leverage → Protect Capital
+
+**That's it! 🎉**
+
+- 🌐 Frontend: http://localhost:5173
+- ⛓️ Local Blockchain: http://localhost:8545
+
+## 🛠️ For Developers
+
+<details>
+<summary>📁 Project Structure</summary>
+
+```
+vault-strategy/
+├── 📜 vault-contracts/    # Smart contracts & tests
+│   ├── contracts/         # Solidity contracts
+│   ├── scripts/           # Deployment scripts
+│   ├── test/              # 119 passing tests
+│   └── README.md
+├── 📱 frontend/           # React + TypeScript UI
+│   ├── src/               # Frontend source
+│   ├── public/            # Static assets
+│   └── README.md
+└── 📚 README.md           # This file
+```
+
+</details>
+
+<details>
+<summary>🔧 Development Commands</summary>
+
+```bash
+# Contracts
+cd vault-contracts
+npm install
+npm run build              # Compile contracts
+npm test                   # Run 119 tests
+npm run test:integration   # Full lifecycle test
+npm run simulate           # End-to-end simulation
+
+# Frontend
+cd frontend
+npm install
+npm run dev                # Start dev server
+npm run build              # Build for production
+npm run lint               # Code quality checks
+
+# Local Development
+cd vault-contracts
+npx hardhat node           # Terminal 1: Start local blockchain
+npm run setup              # Terminal 2: Deploy contracts
+cd ../frontend
+npm run dev                # Terminal 3: Start frontend
+```
+
+</details>
+
+<details>
+<summary>⚙️ Environment Setup</summary>
+
+Create `.env` files in each directory:
+
+**Frontend (`frontend/.env`):**
+
+```env
+VITE_CHAIN_ID=31337
+VITE_RPC_URL=http://localhost:8545
+VITE_VAULT_BTC_ADDRESS=your_deployed_vbtc_address
+VITE_STRATEGY_FACTORY_ADDRESS=your_deployed_factory_address
+VITE_ORACLE_ADDRESS=your_deployed_oracle_address
+VITE_AAVE_ADDRESS=your_deployed_aave_address
+```
+
+**Contracts (`vault-contracts/.env`):**
+
+```env
+# Deployment
+PRIVATE_KEY=your_deployer_private_key
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-api-key
+
+# Contract Addresses (after deployment)
+VAULT_BTC_ADDRESS=deployed_vbtc_address
+STRATEGY_FACTORY_ADDRESS=deployed_factory_address
+ORACLE_ADDRESS=deployed_oracle_address
+AAVE_ADDRESS=deployed_aave_address
+```
+
+</details>
+
+<details>
+<summary>📊 Smart Contracts Overview</summary>
+
+### Core Contracts
+
+**StrategyFactory.sol**
+- Creates isolated vaults for each user
+- Tracks all deployed vaults
+- Provides vault lookup by owner
+
+**LeverageStrategy.sol** (Per-User Vault)
+- Owner-only: deposit, withdraw, supplyToAave, repayDebt
+- Public: rebalance (automated leverage adjustment)
+- Tracks: vault balance, supplied collateral, debt, BTC position
+
+**VaultBTC.sol**
+- ERC20 token with 8 decimal precision
+- Demo: Public mint/burn
+- Production: Replace with Bitcoin bridge token
+
+**MockAave.sol** (Demo)
+- Simplified lending pool
+- 75% LTV, 80% liquidation threshold
+- Production: Replace with real Aave
+
+**OracleEMA.sol** (Demo)
+- Stores price + 20/50/200-day EMAs
+- Signal detection: +2 (strong bullish) to -2 (strong bearish)
+- Production: Replace with Chainlink
+
+</details>
+
+## 🏛️ Architecture
+
+### How It Works
+
+**1. Vault Creation**
+```
+User → StrategyFactory.createVault(riskTier) → New LeverageStrategy deployed
+```
+
+**2. Deposit & Supply**
+```
+User deposits vBTC → Vault balance → Supply to Aave → Earn yield
+```
+
+**3. Automated Rebalancing**
+```
+Bullish Signal: Borrow stablecoin → Buy BTC → Increase leverage
+Bearish Signal: Sell BTC → Repay debt → Decrease leverage
+```
+
+**4. Withdrawal**
+```
+Repay debt (if any) → Withdraw from Aave → Withdraw to wallet
 ```
 
 ### EMA Signal Detection
 
-| Signal | Condition | Action |
-|--------|-----------|--------|
-| 📈 Strong Bullish (+2) | Price > all EMAs (20, 50, 200) | Increase leverage aggressively |
-| 📈 Bullish (+1) | Price > EMA20 & EMA50 | Increase leverage moderately |
-| ➡️ Neutral (0) | Mixed signals | Hold current leverage |
-| 📉 Bearish (-1) | Price < EMA20 & EMA50 | Decrease leverage moderately |
-| 📉 Strong Bearish (-2) | Price < all EMAs | Decrease leverage aggressively |
+| Signal | Condition | Leverage Action |
+|--------|-----------|-----------------|
+| 📈 Strong Bullish (+2) | Price > all EMAs | Increase aggressively |
+| 📈 Bullish (+1) | Price > EMA20 & EMA50 | Increase moderately |
+| ➡️ Neutral (0) | Mixed signals | Hold current |
+| 📉 Bearish (-1) | Price < EMA20 & EMA50 | Decrease moderately |
+| 📉 Strong Bearish (-2) | Price < all EMAs | Decrease aggressively |
 
-## 🚀 Quick Start
+### Risk Tiers
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
+| Tier | Max Leverage | Step Size | Use Case |
+|------|--------------|-----------|----------|
+| 🛡️ Low | 1.1x | 0.05x | Conservative |
+| ⚖️ Medium | 1.3x | 0.1x | Balanced |
+| 🔥 High | 1.5x | 0.1x | Aggressive |
 
-### Setup Contracts
 
-```bash
-cd vault-contracts
-npm install
-npm run build
-npm test              # Run 113 tests
-npm run simulate      # Run full simulation
-```
+## 🌟 What Makes This Unique
 
-### Setup Frontend
-
-```bash
-cd frontend
-npm create vite@latest . -- --template react-ts
-npm install
-npm install ethers @tanstack/react-query wagmi viem
-npm run dev
-```
-
-## 🏛️ Architecture
-
-### System Overview
-
-```
-┌─────────────┐
-│   Users     │
-└──────┬──────┘
-       │ createVault()
-       ▼
-┌─────────────────────┐
-│ StrategyFactory     │ ──────┐
-│ - Creates vaults    │       │
-│ - Tracks ownership  │       │
-└─────────────────────┘       │
-                              │ deploys
-       ┌──────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────┐
-│ LeverageStrategy (Per-User Vault)   │
-│ - Vault balance management          │
-│ - Supply to Aave for yield          │
-│ - Automated leverage adjustment     │
-│ - Portfolio tracking                │
-└──────┬──────────────┬───────────────┘
-       │              │
-       ▼              ▼
-┌─────────────┐  ┌──────────────┐
-│  MockAave   │  │  OracleEMA   │
-│  - Supply   │  │  - Price     │
-│  - Borrow   │  │  - EMA20/50  │
-│  - Repay    │  │  - EMA200    │
-└─────────────┘  │  - Signals   │
-                 └──────────────┘
-```
-
-## 🔄 Contract Flow
-
-### 1. Vault Creation Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Factory as StrategyFactory
-    participant Vault as LeverageStrategy
-    
-    User->>Factory: createVault(riskTier)
-    Factory->>Vault: deploy new LeverageStrategy
-    Note over Vault: Owner = User<br/>Risk = riskTier
-    Factory->>Factory: Store in registry
-    Factory-->>User: VaultCreated event
-    User->>User: Save vault address
-```
-
-### 2. Deposit & Supply Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant VaultBTC
-    participant Vault as LeverageStrategy
-    participant Aave as MockAave
-    
-    User->>VaultBTC: approve(vault, amount)
-    User->>Vault: deposit(amount)
-    Note over Vault: vaultBalance += amount
-    
-    User->>Vault: supplyToAave(amount)
-    Vault->>VaultBTC: approve(aave, amount)
-    Vault->>Aave: supply(amount)
-    Note over Vault: vaultBalance -= amount<br/>suppliedToAave += amount<br/>btcPosition += amount
-    Note over Aave: User earns yield
-```
-
-### 3. Automated Rebalancing Flow
-
-```mermaid
-sequenceDiagram
-    participant Keeper
-    participant Oracle as OracleEMA
-    participant Vault as LeverageStrategy
-    participant Aave as MockAave
-    
-    loop Every Period
-        Keeper->>Oracle: getSignal()
-        Oracle-->>Keeper: signal (+2 to -2)
-        
-        alt Bullish Signal
-            Keeper->>Vault: rebalance()
-            Note over Vault: targetLeverage += step
-            Vault->>Aave: borrow(stablecoin)
-            Note over Vault: Simulate: Buy BTC<br/>btcPosition += bought<br/>Track avg price
-            Vault-->>Keeper: Rebalance event
-        
-        else Bearish Signal
-            Keeper->>Vault: rebalance()
-            Note over Vault: targetLeverage -= step
-            Note over Vault: Simulate: Sell BTC<br/>btcPosition -= sold
-            Vault->>Aave: repay(stablecoin)
-            Vault-->>Keeper: Rebalance event
-        end
-    end
-```
-
-### 4. Withdrawal Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Vault as LeverageStrategy
-    participant Aave as MockAave
-    participant VaultBTC
-    
-    alt Has Debt
-        User->>Vault: repayDebt(btcAmount)
-        Note over Vault: Sell BTC for stablecoin
-        Vault->>Aave: repay(debt)
-        Note over Vault: borrowedFromAave -= debt
-    end
-    
-    alt Funds in Aave
-        User->>Vault: withdrawFromAave(amount)
-        Vault->>Aave: withdraw(amount)
-        Note over Vault: suppliedToAave -= amount<br/>vaultBalance += amount
-    end
-    
-    User->>Vault: withdraw(amount)
-    Note over Vault: vaultBalance -= amount
-    Vault->>VaultBTC: transfer(user, amount)
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+1. **EMA-Based Auto-Leverage**: 20/50/200-day EMAs for trend detection
+2. **Vault Balance Separation**: Deposits distinct from active collateral
+3. **Portfolio Tracking**: Average BTC purchase price for PnL visibility
+4. **Self-Custody Forward**: Designed for trustless vaultBTC
+5. **Risk-Tiered**: 1.0–1.5x reduces liquidation risk
+6. **Isolated Vaults**: Per-user contracts for maximum control
+7. **Manual Override**: repayDebt() and withdrawFromAave() anytime
 
 ## 📄 License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
