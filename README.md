@@ -1,22 +1,67 @@
-# Vault Strategy
+# 🚀 Vault Strategy
 
-A DeFi protocol for automated, EMA-based leverage management for Bitcoin holders with self-custody guarantees.
+**Automated, EMA-based leverage management for Bitcoin holders with self-custody guarantees.**
 
-## 🏗️ Monorepo Structure
+A DeFi protocol that provides rule-based leverage management using 20/50/200-day EMA signals, allowing BTC holders to enhance returns while maintaining self-custody and reducing drawdown risk.
+
+## 📋 Table of Contents
+
+- [Problem Statement](#-problem-statement)
+- [Solution](#-solution)
+- [How It Works](#-how-it-works)
+- [Quick Start](#-quick-start)
+- [Architecture](#-architecture)
+- [Contract Flow](#-contract-flow)
+
+## 🎯 Problem Statement
+
+Bitcoin holders face a dilemma:
+
+- **Want**: Delta exposure with smoother drawdowns and automated profit-taking
+- **Don't Want**: To give up self-custody or rely on centralized platforms
+- **Current Solutions**: Manual leverage tools, centralized exchanges, or wrapped BTC with custody risk
+
+**The Gap**: No automated, rule-based leverage system that works with self-custodied Bitcoin.
+
+## 💡 Solution
+
+Vault Strategy provides:
+
+1. **Automated Leverage Management**: Uses EMA signals (20/50/200-day) to automatically adjust leverage
+2. **Self-Custody Compatible**: Designed to work with Bitcoin trustless vaults (BitVM3)
+3. **Risk-Tiered Approach**: Choose Low (1.1x), Medium (1.3x), or High (1.5x) max leverage
+4. **Isolated Vaults**: Each user gets their own strategy contract via factory pattern
+5. **Transparent Rules**: Open-source, auditable, EMA-based decision making
+
+## 🔄 How It Works
+
+### User Journey
 
 ```
-vault-strategy/
-├── vault-contracts/     # Smart contracts (Hardhat)
-│   ├── contracts/      # Solidity contracts
-│   ├── scripts/        # Deployment & interaction scripts
-│   ├── test/           # Contract tests (113 tests)
-│   └── README.md
-├── frontend/           # React + TypeScript frontend
-│   ├── src/           # Frontend source code
-│   ├── public/        # Static assets
-│   └── README.md
-└── README.md          # This file
+1. Create Vault → 2. Deposit vBTC → 3. Supply to Aave → 4. Auto-Rebalance → 5. Withdraw
 ```
+
+### Leverage Mechanism
+
+**Bullish Signal** (Price > EMAs):
+```
+Supply BTC → Borrow Stablecoin → Buy More BTC → Increase Leverage
+```
+
+**Bearish Signal** (Price < EMAs):
+```
+Sell BTC → Repay Debt → Decrease Leverage → Protect Capital
+```
+
+### EMA Signal Detection
+
+| Signal | Condition | Action |
+|--------|-----------|--------|
+| 📈 Strong Bullish (+2) | Price > all EMAs (20, 50, 200) | Increase leverage aggressively |
+| 📈 Bullish (+1) | Price > EMA20 & EMA50 | Increase leverage moderately |
+| ➡️ Neutral (0) | Mixed signals | Hold current leverage |
+| 📉 Bearish (-1) | Price < EMA20 & EMA50 | Decrease leverage moderately |
+| 📉 Strong Bearish (-2) | Price < all EMAs | Decrease leverage aggressively |
 
 ## 🚀 Quick Start
 
@@ -44,145 +89,137 @@ npm install ethers @tanstack/react-query wagmi viem
 npm run dev
 ```
 
-## 📦 Contracts
+## 🏛️ Architecture
 
-The smart contract suite includes:
+### System Overview
 
-- **VaultBTC** - ERC20 token (8 decimals, BTC-style)
-- **MockAave** - Simplified lending pool
-- **OracleEMA** - EMA oracle with signal detection
-- **LeverageStrategy** - Per-user vault with automated leverage
-- **StrategyFactory** - Factory for creating isolated vaults
-
-### Key Features
-
-✅ **Vault Balance Separation** - Deposits stay as vault balance  
-✅ **EMA-Based Signals** - 20/50/200-day EMAs for trend detection  
-✅ **Automated Leverage** - Increases on bullish, decreases on bearish  
-✅ **Risk Tiers** - Low (1.1x), Medium (1.3x), High (1.5x)  
-✅ **Portfolio Tracking** - Average BTC price and position metrics  
-✅ **Self-Custody Compatible** - Designed for Bitcoin trustless vaults  
-
-## 🧪 Testing
-
-All contracts have comprehensive test coverage:
-
-```bash
-cd vault-contracts
-npm test
+```
+┌─────────────┐
+│   Users     │
+└──────┬──────┘
+       │ createVault()
+       ▼
+┌─────────────────────┐
+│ StrategyFactory     │ ──────┐
+│ - Creates vaults    │       │
+│ - Tracks ownership  │       │
+└─────────────────────┘       │
+                              │ deploys
+       ┌──────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────┐
+│ LeverageStrategy (Per-User Vault)   │
+│ - Vault balance management          │
+│ - Supply to Aave for yield          │
+│ - Automated leverage adjustment     │
+│ - Portfolio tracking                │
+└──────┬──────────────┬───────────────┘
+       │              │
+       ▼              ▼
+┌─────────────┐  ┌──────────────┐
+│  MockAave   │  │  OracleEMA   │
+│  - Supply   │  │  - Price     │
+│  - Borrow   │  │  - EMA20/50  │
+│  - Repay    │  │  - EMA200    │
+└─────────────┘  │  - Signals   │
+                 └──────────────┘
 ```
 
-**113 passing tests:**
-- VaultBTC: 21 tests
-- OracleEMA: 24 tests
-- MockAave: 33 tests
-- StrategyFactory: 18 tests
-- VaultStrategy: 17 tests
+## 🔄 Contract Flow
 
-## 📜 Scripts
+### 1. Vault Creation Flow
 
-Interactive scripts for contract interaction:
-
-```bash
-cd vault-contracts
-
-npm run simulate        # Full end-to-end simulation
-npm run query          # Query all contract states
-npm run oracle:update  # Update oracle with market data
-npm run aave:supply    # Supply and borrow from Aave
+```mermaid
+sequenceDiagram
+    participant User
+    participant Factory as StrategyFactory
+    participant Vault as LeverageStrategy
+    
+    User->>Factory: createVault(riskTier)
+    Factory->>Vault: deploy new LeverageStrategy
+    Note over Vault: Owner = User<br/>Risk = riskTier
+    Factory->>Factory: Store in registry
+    Factory-->>User: VaultCreated event
+    User->>User: Save vault address
 ```
 
-## 🎨 Frontend (Coming Soon)
+### 2. Deposit & Supply Flow
 
-React + TypeScript frontend with:
-
-- Wallet connection (MetaMask, WalletConnect)
-- Create and manage vaults
-- Deposit/withdraw vBTC
-- Supply to Aave
-- View vault metrics and leverage
-- Monitor oracle signals
-- Trigger rebalancing
-
-## 📚 Documentation
-
-### Contracts
-- [vault-contracts/README.md](vault-contracts/README.md) - Contract documentation
-- [vault-contracts/SCRIPTS.md](vault-contracts/SCRIPTS.md) - Script guide
-- [vault-contracts/TESTING.md](vault-contracts/TESTING.md) - Testing guide
-- [vault-contracts/SUMMARY.md](vault-contracts/SUMMARY.md) - Project summary
-
-### Architecture
-- [vault-contracts/.kiro/steering/product.md](vault-contracts/.kiro/steering/product.md) - Product overview
-- [vault-contracts/.kiro/steering/architecture.md](vault-contracts/.kiro/steering/architecture.md) - System architecture
-- [vault-contracts/.kiro/steering/development.md](vault-contracts/.kiro/steering/development.md) - Development guide
-
-## 🔧 Technology Stack
-
-### Contracts
-- Solidity 0.8.24
-- Hardhat
-- TypeScript
-- Ethers.js
-- Mocha/Chai
-
-### Frontend
-- React 18
-- TypeScript
-- Vite
-- Ethers.js / Wagmi
-- TanStack Query
-
-## 🌐 Deployment
-
-### Local Development
-
-```bash
-# Terminal 1: Start Hardhat node
-cd vault-contracts
-npx hardhat node
-
-# Terminal 2: Deploy contracts
-npm run deploy:local
-
-# Terminal 3: Start frontend
-cd frontend
-npm run dev
+```mermaid
+sequenceDiagram
+    participant User
+    participant VaultBTC
+    participant Vault as LeverageStrategy
+    participant Aave as MockAave
+    
+    User->>VaultBTC: approve(vault, amount)
+    User->>Vault: deposit(amount)
+    Note over Vault: vaultBalance += amount
+    
+    User->>Vault: supplyToAave(amount)
+    Vault->>VaultBTC: approve(aave, amount)
+    Vault->>Aave: supply(amount)
+    Note over Vault: vaultBalance -= amount<br/>suppliedToAave += amount<br/>btcPosition += amount
+    Note over Aave: User earns yield
 ```
 
-### Testnet Deployment
+### 3. Automated Rebalancing Flow
 
-```bash
-cd vault-contracts
-npx hardhat run scripts/deploy.ts --network sepolia
+```mermaid
+sequenceDiagram
+    participant Keeper
+    participant Oracle as OracleEMA
+    participant Vault as LeverageStrategy
+    participant Aave as MockAave
+    
+    loop Every Period
+        Keeper->>Oracle: getSignal()
+        Oracle-->>Keeper: signal (+2 to -2)
+        
+        alt Bullish Signal
+            Keeper->>Vault: rebalance()
+            Note over Vault: targetLeverage += step
+            Vault->>Aave: borrow(stablecoin)
+            Note over Vault: Simulate: Buy BTC<br/>btcPosition += bought<br/>Track avg price
+            Vault-->>Keeper: Rebalance event
+        
+        else Bearish Signal
+            Keeper->>Vault: rebalance()
+            Note over Vault: targetLeverage -= step
+            Note over Vault: Simulate: Sell BTC<br/>btcPosition -= sold
+            Vault->>Aave: repay(stablecoin)
+            Vault-->>Keeper: Rebalance event
+        end
+    end
 ```
 
-## 🛣️ Roadmap
+### 4. Withdrawal Flow
 
-### Phase 1: Demo (✅ Complete)
-- ✅ Smart contracts
-- ✅ Comprehensive tests
-- ✅ Interactive scripts
-- ✅ Documentation
-
-### Phase 2: Frontend (🚧 In Progress)
-- 🚧 React + TypeScript setup
-- ⏳ Wallet integration
-- ⏳ Contract interaction
-- ⏳ UI components
-- ⏳ Dashboard
-
-### Phase 3: Production
-- ⏳ Real Aave integration
-- ⏳ Chainlink oracle
-- ⏳ DEX integration
-- ⏳ Security audit
-- ⏳ Testnet deployment
-
-### Phase 4: Bitcoin Integration
-- ⏳ BitVM3 vault integration
-- ⏳ Bitcoin bridge
-- ⏳ Mainnet deployment
+```mermaid
+sequenceDiagram
+    participant User
+    participant Vault as LeverageStrategy
+    participant Aave as MockAave
+    participant VaultBTC
+    
+    alt Has Debt
+        User->>Vault: repayDebt(btcAmount)
+        Note over Vault: Sell BTC for stablecoin
+        Vault->>Aave: repay(debt)
+        Note over Vault: borrowedFromAave -= debt
+    end
+    
+    alt Funds in Aave
+        User->>Vault: withdrawFromAave(amount)
+        Vault->>Aave: withdraw(amount)
+        Note over Vault: suppliedToAave -= amount<br/>vaultBalance += amount
+    end
+    
+    User->>Vault: withdraw(amount)
+    Note over Vault: vaultBalance -= amount
+    Vault->>VaultBTC: transfer(user, amount)
+```
 
 ## 🤝 Contributing
 
@@ -197,13 +234,3 @@ Contributions are welcome! Please:
 ## 📄 License
 
 MIT
-
-## 🔗 Links
-
-- Documentation: See `/vault-contracts` and `/frontend` READMEs
-- Tests: `cd vault-contracts && npm test`
-- Scripts: `cd vault-contracts && npm run simulate`
-
----
-
-**Status**: ✅ Contracts Complete | 🚧 Frontend In Progress | 🚀 Ready for Enhancement
