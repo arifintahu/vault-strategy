@@ -8,6 +8,8 @@
     "test:integration": "hardhat run scripts/test-integration.ts --network hardhat",
     "test:repay": "hardhat test --grep \"Repay Debt\"",
     "test:accounting": "hardhat test --grep \"Vault Balance\"",
+    "test:faucet": "hardhat run scripts/test-faucet.ts --network localhost",
+    "update-abis": "node scripts/update-frontend-abis.js",
     "setup": "hardhat run scripts/setup-local.ts --network localhost",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "oracle:init": "hardhat run scripts/init-oracle.ts --network localhost",

@@ -41,23 +41,23 @@ export const getSigner = async () => {
 };
 
 export const getVaultBTCContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
-  return new ethers.Contract(CONTRACTS.VaultBTC, VaultBTCABI.abi, signerOrProvider);
+  return new ethers.Contract(CONTRACTS.VaultBTC, VaultBTCABI, signerOrProvider);
 };
 
 export const getMockAaveContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
-  return new ethers.Contract(CONTRACTS.MockAave, MockAaveABI.abi, signerOrProvider);
+  return new ethers.Contract(CONTRACTS.MockAave, MockAaveABI, signerOrProvider);
 };
 
 export const getOracleEMAContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
-  return new ethers.Contract(CONTRACTS.OracleEMA, OracleEMAABI.abi, signerOrProvider);
+  return new ethers.Contract(CONTRACTS.OracleEMA, OracleEMAABI, signerOrProvider);
 };
 
 export const getStrategyFactoryContract = (signerOrProvider: ethers.Signer | ethers.Provider) => {
-  return new ethers.Contract(CONTRACTS.StrategyFactory, StrategyFactoryABI.abi, signerOrProvider);
+  return new ethers.Contract(CONTRACTS.StrategyFactory, StrategyFactoryABI, signerOrProvider);
 };
 
 export const getLeverageStrategyContract = (address: string, signerOrProvider: ethers.Signer | ethers.Provider) => {
-  return new ethers.Contract(address, LeverageStrategyABI.abi, signerOrProvider);
+  return new ethers.Contract(address, LeverageStrategyABI, signerOrProvider);
 };
 
 // Add wallet types
