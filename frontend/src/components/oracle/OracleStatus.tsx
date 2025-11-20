@@ -5,7 +5,7 @@ import { SIGNAL_NAMES } from '../../types/contracts';
 export const OracleStatus = () => {
   const { oracleData, loading, error, refresh } = useOracle();
 
-  if (loading) return <div className="loading">Loading oracle data...</div>;
+  if (!oracleData && loading) return <div className="loading">Loading oracle data...</div>;
   if (error) return <div className="error">Error: {error}</div>;
   if (!oracleData) return null;
 
