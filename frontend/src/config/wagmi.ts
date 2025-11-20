@@ -1,26 +1,26 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { defineChain } from 'viem';
 
-// Define Hardhat local chain
-export const hardhat = defineChain({
-  id: 31337,
-  name: 'Hardhat Local',
+// Define chain - configurable via environment variables
+export const chain = defineChain({
+  id: Number(import.meta.env.VITE_CHAIN_ID) || 31337,
+  name: import.meta.env.VITE_CHAIN_NAME || 'Hardhat Local',
   nativeCurrency: {
     decimals: 18,
-    name: 'Ethereum',
-    symbol: 'ETH',
+    name: import.meta.env.VITE_CHAIN_CURRENCY_NAME || 'Ethereum',
+    symbol: import.meta.env.VITE_CHAIN_CURRENCY_SYMBOL || 'ETH',
   },
   rpcUrls: {
     default: {
-      http: ['http://127.0.0.1:8545'],
+      http: [import.meta.env.VITE_RPC_URL || 'http://127.0.0.1:8545'],
     },
   },
   testnet: true,
 });
 
 export const config = getDefaultConfig({
-  appName: 'Vault Strategy',
-  projectId: 'd419fa909b9a2764bfa119296674f667',
-  chains: [hardhat],
+  appName: import.meta.env.VITE_APP_NAME || 'Vault Strategy',
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'd419fa909b9a2764bfa119296674f667',
+  chains: [chain],
   ssr: false,
 });
