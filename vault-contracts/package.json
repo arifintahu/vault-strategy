@@ -12,6 +12,7 @@
     "update-abis": "node scripts/update-frontend-abis.js",
     "setup": "hardhat run scripts/setup-local.ts --network localhost",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "oracle:init": "hardhat run scripts/init-oracle.ts --network localhost",
     "simulate": "hardhat run scripts/simulate.ts",
     "query": "hardhat run scripts/query-state.ts",
@@ -26,5 +27,8 @@
     "hardhat": "^2.22.15",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3"
   }
 }
