@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getStrategyFactoryContract } from '../../utils/contracts';
-import { RiskTier, RISK_TIER_NAMES } from '../../types/contracts';
+import { RiskTier } from '../../types/contracts';
 import type { RiskTierType } from '../../types/contracts';
 import { useSigner } from '../../hooks/useSigner';
 
